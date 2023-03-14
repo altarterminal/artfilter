@@ -118,10 +118,7 @@ offsets=$opt_o
 # 本体処理
 ######################################################################
 
-# コンテンツを入力
-cat ${content:+"$content"}                                           |
-
-awk -v FS='' -v OFS='' '
+gawk -v FS='' -v OFS='' '
 BEGIN {
   width      = '"${width}"';
   height     = '"${height}"';
@@ -259,4 +256,4 @@ state == "s_fin" {
   # 入力をパススルー
   print;
 }
-'
+' ${content:+"$content"}
