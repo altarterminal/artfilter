@@ -145,50 +145,47 @@ BEGIN {
   h2z["U"] = "Ｕ"; h2z["V"] = "Ｖ"; h2z["W"] = "Ｗ"; h2z["X"] = "Ｘ";
   h2z["Y"] = "Ｙ"; h2z["Z"] = "Ｚ";
 
-  # 座標をすべて読み込む
+  # 系列データをすべて読み出し
   tn = 0; # 軌道の数
   cn = 0; # 部品の数
   while ((getline tline < trackfile) > 0) {
+    # フィールドを分離
     fn = split(tline, tary, " ");
 
     # フィールド数を簡易チェック
     if (fn == 2) {
       # 軌道の情報（x座標 / y座標）
-      tn = tn + 1;
+      tn++;
 
       tx[tn] = tary[1];
       ty[tn] = tary[2];
     }
     else if (fn == 3) {
       # 部品の情報（x座標 / y座標 / 色）
-      cn = cn + 1;
+      cn++;
 
-      cx[cn] = tary[1];
-      cy[cn] = tary[2];
-      cc[cn] = tary[3];
+      xtmp = tary[1];
+      ytmp = tary[2];
+      ctmp = tary[3];
 
-      # 有効座標にはオフセットを加算
-      cx[cn] = (cx[cn] == "n") ? cx[cn] : (cx[cn] + xoffset);
-      cy[cn] = (cy[cn] == "n") ? cy[cn] : (cy[cn] + yoffset);
-      # 半角文字を全角に変換
-      cc[cn] = h2z[cc[cn]];
+      # 座標を記録
+      cx[cn] = (xtmp == "n") ? xtmp : (xtmp + xoffset);
+      cy[cn] = (ytmp == "n") ? ytmp : (ytmp + yoffset);
+
+      # 色アルファベットを全角に変換
+      cc[cn] = h2z[ctmp];
     }
     else {
-      # フィールド数が不正な場合はメッセージ出力して終了
-      if (prevsn != sn) {
-        msg = "'"${0##*/}"': invalid number of field (" tn + cn + 1 ")";
-        print msg >> "/dev/stderr";
-        exit 81;
-      }
+      # フィールド数が不正な場合はエラーを出力して終了
+      msg = "'"${0##*/}"': invalid number of field (" tn+cn+1 ")";
+      print msg > "/dev/stderr";
+      exit 81;
     }
   }
 
   # 待ち時間があるならば「待機状態」に遷移
-  if (waittime > 0) {
-    state = "s_wait"; wcnt = waittime; 
-  } else {
-    state = "s_run";  tcnt = 0;
-  }
+  if   (waittime > 0) { state = "s_wait"; wcnt = waittime; }
+  else                { state = "s_run";  tidx = 1;        }
 }
 
 ######################################################################
@@ -196,7 +193,7 @@ BEGIN {
 ######################################################################
 
 state == "s_wait" {
-  # 1フレーム分の行をそのまま出力
+  # フレームをそのまま出力
   print;
   for (i = 2; i <= height; i++) {
     if   (getline > 0) { print; }
@@ -205,7 +202,7 @@ state == "s_wait" {
 
   # 待ち時間をすべて消費したら「描画状態」に遷移
   wcnt--;
-  if (wcnt == 0) { state = "s_run"; tcnt = 0; next; }
+  if (wcnt == 0) { state = "s_run"; tidx = 1; next; }
 }
 
 ######################################################################
@@ -213,23 +210,18 @@ state == "s_wait" {
 ######################################################################
 
 state == "s_run" {
-  # 1フレーム分のバッファを入力
-  for (j = 1; j <= width; j++) { buf[1, j] = $j; }
+  # フレームを入力
+  for(j=1;j<=width;j++){buf[1,j]=$j;}
   for (i = 2; i <= height; i++) {
-    if (getline line > 0) {
-      split(line, ary, "");
-      for (j = 1; j <= width; j++) { buf[i, j] = ary[j]; }
-    }
-    else {
-      exit;
-    }
+    if   (getline > 0) { for(j=1;j<=width;j++){buf[i,j]=$j;} }
+    else               { exit;                               }
   }
 
   # 図形を上書き
   for (c = 1; c <= cn; c++) {
-     # 「Ｎ」を指定する可能性はないはずであるが念のため
+     # Ｎを指定する可能性はないはずだが念のため確認
      if (cc[c] != "Ｎ") {
-       buf[cy[c]+ty[tcnt+1], cx[c]+tx[tcnt+1]] = cc[c];
+       buf[cy[c]+ty[tidx], cx[c]+tx[tidx]] = cc[c];
      }
   }
 
@@ -240,19 +232,15 @@ state == "s_run" {
   }
 
   # 時刻インデックスを更新
-  tcnt++;
-  if (tcnt >= tn) {
+  tidx++;
+  if (tidx > tn) {
     # 表示を一巡したので次の状態を判定
 
-    if (isloop == "yes") {
-      # ループ指定があればもう一度最初から
-      if (waittime > 0) { state = "s_wait"; wcnt = waittime; next; }
-      else              { state = "s_run";  tcnt = 0;        next; }
-    }
-    else {
-      # ループ指定がなければ「終了状態」に遷移
-                        { state = "s_fin";                   next; }
-    }
+    # 出力をもう一度最初から行う
+    if (isloop == "yes") { state = "s_run"; tidx = 1; next; }
+
+    # 図形の出力を終了して以降の入力はそのまま出力
+    else                 { state = "s_fin";           next; }
   }
 }
 

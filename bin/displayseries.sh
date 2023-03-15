@@ -144,44 +144,49 @@ BEGIN {
   h2z["U"] = "Ｕ"; h2z["V"] = "Ｖ"; h2z["W"] = "Ｗ"; h2z["X"] = "Ｘ";
   h2z["Y"] = "Ｙ"; h2z["Z"] = "Ｚ";
 
-  # 座標をすべて読み込む
+  # 系列データをすべて読み出す
   tn = 0;
   while ((getline sline < seriesfile) > 0) {
-    tn = tn + 1;
-    sn = split(sline, sary, " ") / 3;
+    fn = split(sline, sary, " ");
+    sn = fn / 3;
 
-    # フィールド数を簡易チェック    
-    if (tn == 1) {
-      prevsn = sn;
-    }  else {
-      # 異なるフィールド数の行が存在する場合はメッセージ出力して終了
-      if (prevsn != sn) {
-        msg = "'"${0##*/}"': inconsistent number of field (" tn ")";
-        print msg >> "/dev/stderr";
-        exit 81;
-      }
+    # 基準となるフィールド数を保存
+    if (tn == 0) { stdsn = sn; }
+
+    if (fn % 3 != 0) {
+      # フィールド数が不正な場合はエラーを出力して終了
+      msg = "'"${0##*/}"': invalid number of field (" tn+1 ")";
+      print msg > "/dev/stderr";
+      exit 81;
     }
-    
-    for (i = 1; i <= sn; i++) {
-      # x座標・y座標・色を分離
-      x[tn, i] = sary[3*(i-1)+1];
-      y[tn, i] = sary[3*(i-1)+2];
-      c[tn, i] = sary[3*(i-1)+3];
+    else if (stdsn != sn) {
+      # フィールド数が不正な場合はエラーを出力して終了
+      msg = "'"${0##*/}"': inconsistent number of field (" tn+1 ")";
+      print msg > "/dev/stderr";
+      exit 82;
+    }
+    else {
+      # 系列の情報（x座標 / y座標 / 色）
+      tn++;
 
-      # 有効座標にはオフセットを加算
-      x[tn, i] = (x[tn, i] == "n") ? x[tn, i] : (x[tn, i] + xoffset);
-      y[tn, i] = (y[tn, i] == "n") ? y[tn, i] : (y[tn, i] + yoffset);
-      # 全角に変換
-      c[tn, i] = h2z[c[tn, i]];
+      for (i = 1; i <= sn; i++) {
+        xtmp = sary[3*(i-1)+1];
+        ytmp = sary[3*(i-1)+2];
+        ctmp = sary[3*(i-1)+3];
+
+        # 座標を記録
+        x[tn, i] = (xtmp == "n") ? xtmp : (xtmp + xoffset);
+        y[tn, i] = (ytmp == "n") ? ytmp : (ytmp + yoffset);
+
+        # 色アルファベットを全角に変換
+        c[tn, i] = h2z[ctmp];
+      }
     }
   }
 
   # 待ち時間があるならば「待機状態」に遷移
-  if (waittime > 0) {
-    state = "s_wait"; wcnt = waittime; 
-  } else {
-    state = "s_run";  tcnt = 1;
-  }
+  if   (waittime > 0) { state = "s_wait"; wcnt = waittime; }
+  else                { state = "s_run";  tofst = 0;       }
 }
 
 ######################################################################
@@ -189,7 +194,7 @@ BEGIN {
 ######################################################################
 
 state == "s_wait" {
-  # 1フレーム分の行をそのまま出力
+  # フレームをそのまま出力
   print;
   for (i = 2; i <= height; i++) {
     if   (getline > 0) { print; }
@@ -198,7 +203,7 @@ state == "s_wait" {
 
   # 待ち時間をすべて消費したら「描画状態」に遷移
   wcnt--;
-  if (wcnt == 0) { state = "s_run"; tcnt = 0; next; }
+  if (wcnt == 0) { state = "s_run"; tofst = 0; next; }
 }
 
 ######################################################################
@@ -206,22 +211,20 @@ state == "s_wait" {
 ######################################################################
 
 state == "s_run" {
-  # 1フレーム分のバッファを入力
-  for (j = 1; j <= width; j++) { buf[1, j] = $j; }
+  # フレームを入力
+  for (j=1;j<=width;j++){buf[1,j]=$j;}
   for (i = 2; i <= height; i++) {
-    if (getline line > 0) {
-      split(line, ary, "");
-      for (j = 1; j <= width; j++) { buf[i, j] = ary[j]; }
-    }
-    else {
-      exit;
-    }
+    if   (getline > 0) { for(j=1;j<=width;j++){buf[i,j]=$j;} }
+    else               { exit;                               }
   }
 
   # 図形を上書き
   for (s = 1; s <= sn; s++) {
     for (t = 1; t <= tn; t++) {
-      cidx = ((t + tcnt) > tn) ? (t + tcnt - tn) : (t + tcnt);
+      # 色をリングバッファから取り出す
+      cidx = ((t + tofst) > tn) ? (t + tofst - tn) : (t + tofst);
+
+      # 色を上書き
       if (c[cidx,s] != "Ｎ") {
         buf[y[t,s],x[t,s]] = c[cidx,s];
       }
@@ -235,19 +238,15 @@ state == "s_run" {
   }
 
   # 時刻インデックスを更新
-  tcnt++;
-  if (tcnt >= tn) {
+  tofst++;
+  if (tofst >= tn) {
     # 表示を一巡したので次の状態を判定
 
-    if (isloop == "yes") {
-      # ループ指定があればもう一度最初から
-      if (waittime > 0) { state = "s_wait"; wcnt = waittime; next; }
-      else              { state = "s_run";  tcnt = 0;        next; }
-    }
-    else {
-      # ループ指定がなければ「終了状態」に遷移
-                        { state = "s_fin";                   next; }
-    }
+    # 出力をもう一度最初から行う
+    if   (isloop == "yes") { state = "s_run"; tofst = 0; next; }
+
+    # 図形の出力を終了して以降の入力はそのまま出力
+    else                   { state = "s_fin";            next; }
   }
 }
 

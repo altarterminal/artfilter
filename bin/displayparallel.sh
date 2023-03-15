@@ -144,66 +144,55 @@ BEGIN {
   h2z["U"] = "Ｕ"; h2z["V"] = "Ｖ"; h2z["W"] = "Ｗ"; h2z["X"] = "Ｘ";
   h2z["Y"] = "Ｙ"; h2z["Z"] = "Ｚ";
 
-  # 座標をすべて読み込む
-  tmax = -1;
-  tcnt = 0;
-  while ((getline pline < parallelfile) > 0) {
-    # 読み取り行数を記録
-    tcnt++;
+  # tset:   tの取りうる値の集合
+  # tmax:   tの最大値
+  # tn[k]:  t=kの座標の数
+  # x[k,l]: t=kのl番目のx座標
+  # y[k,l]: t=kのl番目のy座標
+  # c[k,l]: t=kのl番目の色
+  # rcnt:   読み取り行数（エラー出力用）
 
+  # 系列データをすべて読み出す
+  tmax = -1;
+  rcnt = 0;
+  while ((getline pline < parallelfile) > 0) {
     # フィールドを分離
     fn = split(pline, pary, " ");
 
-    # フィールド数が不正な行が存在する場合はメッセージ出力して終了
-    if (fn != 4) {
-      msg = "'"${0##*/}"': invalid number of field (" tcnt ")";
-      print msg >> "/dev/stderr";
+    if (fn == 4) {
+      # ピクセルの情報（時刻 / x座標 / y座標 / 色）
+      rcnt++;
+
+      ttmp = pary[1];
+      xtmp = pary[2];
+      ytmp = pary[3];
+      ctmp = pary[4];
+
+      # tの最大値を更新
+      tmax = (tmax < ttmp) ? ttmp : tmax;
+
+      # 新しいtの出現を記録
+      if (!(ttmp in tset)) { tset[ttmp] = 1; }
+
+      # 座標を記録
+      tn[ttmp]++;
+      x[ttmp, tn[ttmp]] = (xtmp == "n") ? xtmp : (xtmp + xoffset);
+      y[ttmp, tn[ttmp]] = (ytmp == "n") ? ytmp : (ytmp + yoffset);
+
+      # 色アルファベットを全角に変換
+      c[ttmp, tn[ttmp]] = h2z[ctmp];
+    }
+    else {
+      # フィールド数が不正な場合はエラーを出力して終了
+      msg = "'"${0##*/}"': invalid number of field (" rcnt+1 ")";
+      print msg > "/dev/stderr";
       exit 81;
     }
-
-    # tset:   tの取りうる値の集合
-    # tn:     tsetのノード数
-    # tmax:   tの最大値
-    # tn[k]:  t=kの座標の数
-    # x[k,l]: t=kのl番目のx座標
-    # y[k,l]: t=kのl番目のy座標
-    # c[k,l]: t=kのl番目の色
-
-    ttmp = pary[1];
-    xtmp = pary[2];
-    ytmp = pary[3];
-    ctmp = pary[4];
-
-    # tの最大値を更新
-    tmax = (tmax < ttmp) ? ttmp : tmax;
-
-    # 新しいtの出現を記憶
-    if (!(ttmp in tset)) { tset[ttmp] = 1; }
-
-    # 座標を記録
-    tn[ttmp]++;
-    x[ttmp, tn[ttmp]] = (xtmp == "n") ? xtmp : (xtmp + xoffset);
-    y[ttmp, tn[ttmp]] = (ytmp == "n") ? ytmp : (ytmp + yoffset);
-
-    # 全角に変換
-    c[ttmp, tn[ttmp]] = h2z[ctmp];
   }
-
-  # 動作確認用
-  # for (t in tset) {
-  #   printf "%d: num = %d\n", t, tn[t];
-
-  #   for (i = 1; i <= tn[t]; i++) {
-  #     printf "%d, %d, %s\n", x[t,i], y[t,i], c[t,i];
-  #   }
-  # }
 
   # もし待ち時間があるならば「待機状態」に遷移
-  if (waittime > 0) {
-    state = "s_wait"; wcnt  = waittime; 
-  } else {
-    state = "s_run";  tidx = 1;
-  }
+  if   (waittime > 0) { state = "s_wait"; wcnt = waittime; }
+  else                { state = "s_run";  tidx = 1;        }
 }
 
 ######################################################################
@@ -211,15 +200,15 @@ BEGIN {
 ######################################################################
 
 state == "s_wait" {
-  # 1フレーム分の行をそのまま出力
+  # フレームをそのまま出力
   print;
   for (i = 2; i <= height; i++) {
     if   (getline > 0) { print; }
     else               { exit;  }
   }
 
-  # 待ち時間をすべて消費したら「描画状態」へ移行
-  wcnt = wcnt - 1;
+  # 待ち時間をすべて消費したら「描画状態」に遷移
+  wcnt--;
   if (wcnt == 0) { state = "s_run"; tidx = 1; next; }
 }
 
@@ -228,16 +217,11 @@ state == "s_wait" {
 ######################################################################
 
 state == "s_run" {
-  # 1フレーム分のバッファを入力
-  for (j = 1; j <= width; j++) { buf[1, j] = $j; }
+  # フレームを入力
+  for(j=1;j<=width;j++){buf[1,j]=$j;}
   for (i = 2; i <= height; i++) {
-    if (getline line > 0) {
-      split(line, ary, "");
-      for (j = 1; j <= width; j++) { buf[i, j] = ary[j]; }
-    }
-    else {
-      exit;
-    }
+    if   (getline > 0) { for(j=1;j<=width;j++){buf[i,j]=$j;} }
+    else               { exit;                               }
   }
 
   # 図形を上書き
@@ -257,16 +241,13 @@ state == "s_run" {
   # 時刻インデックスを更新
   tidx++;
   if (tidx > tmax) {
-    # 出力をもう一度最初から行う
-    if (isloop == "yes") {
-      if (waittime > 0) { state = "s_wait"; wcnt = waittime; next; }
-      else              { state = "s_run";  tidx = 1;        next; }
-    }
+    # すべての出力を終えたので次の状態を判定
 
-    # 出力を完了し、残りのデータはそのまま出力
-    else {
-                        { state = "s_fin";                   next; }
-    }
+    # 出力をもう一度最初から行う
+    if (isloop == "yes") { state = "s_run"; tidx = 1; next; }
+
+    # 図形の出力を終了して以降の入力はそのまま出力
+    else                 { state = "s_fin";           next; }
   }
 }
 
@@ -275,6 +256,7 @@ state == "s_run" {
 ######################################################################
 
 state == "s_fin" {
+  # 入力をパススルー
   print;
 }
 ' ${content:+"$content"}
