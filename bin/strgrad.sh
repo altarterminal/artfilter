@@ -8,7 +8,7 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -r<行数> -s<変化文字列> [コンテンツ]
-	Options : -f<フレーム数> -c<対象文字>
+	Options : -f<フレーム数> -c<対象文字> -l
 
 	コンテンツの<対象文字>を<変化文字列>で変化させて出力する。
 
@@ -16,6 +16,7 @@ print_usage_and_exit () {
 	-sオプションで変化文字列を指定する。
 	-fオプションで何フレームで文字を変化させるか指定できる。デフォルトは1。
 	-cオプションで変化対象の文字を指定できる。デフォルトは"■"。
+	-lオプションで描画のループの有無を指定できる。デフォルトはループしない。
 	USAGE
   exit 1
 }
@@ -30,6 +31,7 @@ opt_r=''
 opt_s=''
 opt_f='1'
 opt_c='■'
+opt_l='no'
 
 # 引数をパース
 i=1
@@ -41,6 +43,7 @@ do
     -s*)                 opt_s=${arg#-s}      ;;
     -f*)                 opt_f=${arg#-f}      ;;
     -c*)                 opt_c=${arg#-c}      ;;
+    -l)                  opt_l='yes'          ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ] ; then
         opr=$arg
@@ -94,6 +97,7 @@ height=$opt_r
 set=$opt_s
 frame=$opt_f
 char=$opt_c
+isloop=$opt_l
 
 ######################################################################
 # 本体処理
@@ -109,16 +113,21 @@ BEGIN{
   set    = "'"${set}"'";
   frame  = '"${frame}"';
   char   = "'"${char}"'";
+  isloop = "'"${isloop}"'";
 
   # 変化後文字列を分離
   nchar = split(set, cset, "");
 
+  # パラメータを初期化
   cidx = 1; # 現在のフレームで変化後文字列の何番目の文字で置換するか
   rcnt = 0; # 現在の入力行がフレームの何行目か
   fcnt = 0; # 更新してから何フレームが経過したか
+
+  # 初期状態を設定
+  state = "s_run";
 }
 
-{
+state == "s_run" {
   # 行数を更新
   rcnt++;
 
@@ -145,8 +154,22 @@ BEGIN{
       cidx++;
       
       # すべての文字で置換し終えたら終了
-      if (cidx > nchar) { exit; }
+      if (cidx > nchar) {
+        # 文字インデックスをリセット
+        cidx = 1;
+
+        # 置換をもう一度最初から行う
+        if   (isloop == "yes") { state = "s_run"; }
+
+        # 置換を終了して以降の入力はそのまま出力
+        else                   { state = "s_fin"; }
+      }
     }
   }
+}
+
+state == "s_fin" {
+  # 入力をパススルー
+  print;
 }
 '
