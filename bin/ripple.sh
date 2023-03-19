@@ -146,6 +146,10 @@ BEGIN{
   xc[0];
   yc[0];
   nc;
+
+  xcf[0];
+  ycf[0];
+  ncf;
   
   # 初期の波紋（半径1）を作成
   rc = 1;
@@ -164,9 +168,12 @@ BEGIN{
     # 波紋を作成
     nc = calccircle(x0,y0,rc,xc,yc);
 
+    # フレーム外の座標をフィルタ
+    ncf = filterframepoint(xc,yc,nc,height,width,xcf,ycf);
+
     # 座標を記録
-    for (i=1;i<=nc;i++){ xall[rn,i]=xc[i]; yall[rn,i]=yc[i]; }
-    nall[rn] = nc;
+    for (i=1;i<=ncf;i++){ xall[rn,i]=xcf[i]; yall[rn,i]=ycf[i]; }
+    nall[rn] = ncf;
 
     # 半径を更新
     rc = rc + speed;  
@@ -190,7 +197,7 @@ state == "s_run" {
 
   # フレームに波紋を上書き
   for (i = 1; i <= nall[ridx]; i++) {      
-    buf[xall[ridx,i], yall[ridx,i]] = "■";
+    buf[yall[ridx,i], xall[ridx,i]] = "■";
   }
 
   # フレームを出力
@@ -198,7 +205,6 @@ state == "s_run" {
     for (j = 1; j <= width; j++) { printf "%s", buf[i, j]; }
     print "";
   }
-
 
   # 経過フレームを更新
   fcnt++;
@@ -235,7 +241,7 @@ state == "s_fin" {
 ######################################################################
 
 # 指定のフレーム内に存在する座標のみを保存
-function filterframePoint(xin,yin,nin,h,w,xout,yout,   nout,i) {
+function filterframepoint(xin,yin,nin,h,w,xout,yout,   nout,i) {
    nout = 0;
 
    for (i = 1; i <= nin; i++) {
@@ -250,9 +256,9 @@ function filterframePoint(xin,yin,nin,h,w,xout,yout,   nout,i) {
 }
 
 # 指定した円周を構成する座標を計算
-function calccircle(x0,y0,r0,x,y,                          \
-                    x1,x2,x3,x4,x5,x6,x7,x8,               \
-                    y1,y2,y3,y4,y5,y6,y7,y8,               \
+function calccircle(x0,y0,r0,x,y,                               \
+                    x1,x2,x3,x4,x5,x6,x7,x8,                    \
+                    y1,y2,y3,y4,y5,y6,y7,y8,                    \
                     xb,yb,d,cx,cy,i,n,ridx,tidx,lidx,bidx,eidx) {
   # 起点の４点
   xb[1] =  r0; yb[1] =   0;
