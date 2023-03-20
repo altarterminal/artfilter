@@ -8,7 +8,7 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -r<行数> -c<列数> -p<中心> [コンテンツ]
-	Options : -f<フレーム数> -l -s<スピード> -m<最大半径>
+	Options : -f<フレーム数> -l -s<スピード> -m<最大半径> -w<待ち時間>
 
 	コンテンツに波紋を上書きする。
 
@@ -19,6 +19,7 @@ print_usage_and_exit () {
 	-lオプションで描画のループの有無を指定できる。デフォルトはループしない。
 	-sオプションで波紋の広がるスピードを指定できる。デフォルトは1。
 	-mオプションで波紋の最大サイズ（半径）を指定できる。デフォルトは10。
+	-wオプションで開始までの待ち時間を指定できる。デフォルトは0。
 	USAGE
   exit 1
 }
@@ -36,6 +37,7 @@ opt_f='1'
 opt_l='no'
 opt_s='1'
 opt_m='10'
+opt_w='0'
 
 # 引数をパース
 i=1
@@ -50,6 +52,7 @@ do
     -l)                  opt_l='yes'          ;;
     -s*)                 opt_s=${arg#-s}      ;;
     -m*)                 opt_m=${arg#-m}      ;;
+    -w*)                 opt_w=${arg#-w}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -109,6 +112,11 @@ if ! printf '%s' "$opt_m" | grep -Eq '^[0-9]+$'; then
   exit 81
 fi
 
+# 有効な数値であるか判定
+if ! printf '%s' "$opt_w" | grep -Eq '^[0-9]+$'; then
+  echo "${0##*/}: \"$opt_w\" invalid number" 1>&2
+  exit 91
+fi
 
 # パラメータを決定
 content=$opr
@@ -119,6 +127,7 @@ frame=$opt_f
 isloop=$opt_l
 speed=$opt_s
 rmax=$opt_m
+waittime=$opt_w
 
 ######################################################################
 # 本体処理
@@ -128,15 +137,20 @@ rmax=$opt_m
 cat ${content:+"$content"}                                           |
 
 gawk -v FS='' -v OFS='' '
+######################################################################
+# 初期化
+######################################################################
+
 BEGIN{
   # パラメータを設定
-  height = '"${height}"';
-  width  = '"${width}"';
-  center = "'"${center}"'";  
-  frame  = '"${frame}"';
-  isloop = "'"${isloop}"'";
-  speed  = '"${speed}"';
-  rmax   = '"${rmax}"';
+  height   = '"${height}"';
+  width    = '"${width}"';
+  center   = "'"${center}"'";
+  frame    = '"${frame}"';
+  isloop   = "'"${isloop}"'";
+  speed    = '"${speed}"';
+  rmax     = '"${rmax}"';
+  waittime = '"${waittime}"';
 
   # 変化後文字列を分離
   split(center, cary, ",");
@@ -183,9 +197,31 @@ BEGIN{
   ridx = 1; # 現在の波紋が何番目のものか
   fcnt = 0; # 更新してから何フレームが経過したか
 
-  # 初期状態を設定
-  state = "s_run";
+  # もし待ち時間があるならば「待機状態に遷移」
+  if   (waittime > 0) { state = "s_wait"; wcnt = waittime; }
+  else                { state = "s_run";                   }
 }
+
+######################################################################
+# 待機状態
+######################################################################
+
+state == "s_wait" {
+  # フレームをそのまま出力
+  print;
+  for (i = 2; i <= height; i++) {
+    if   (getline > 0) { print; }
+    else               { exit;  }
+  }
+
+  # 待ち時間をすべて消費したら「描画状態」に遷移
+  wcnt--;
+  if (wcnt == 0) { state = "s_run"; next; }
+}
+
+######################################################################
+# 実行状態
+######################################################################
 
 state == "s_run" {
   # フレームを入力
@@ -338,6 +374,4 @@ function calccircle(x0,y0,r0,x,y,                               \
 
   return 8 * n + 4;
 }
-
-
 '
