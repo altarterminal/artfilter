@@ -8,7 +8,7 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -r<行数> -c<列数> -p<中心> [コンテンツ]
-	Options : -f<フレーム数> -l -s<スピード> -m<最大半径> -w<待ち時間>
+	Options : -f<フレーム数> -l -s<速度> -m<最大半径> -w<待ち時間> -a<文字>
 
 	コンテンツに波紋を上書きする。
 
@@ -17,9 +17,10 @@ print_usage_and_exit () {
 	-pオプションで波紋の中心の座標を指定する。
 	-fオプションで何フレームで波紋を変化させるか指定できる。デフォルトは1。
 	-lオプションで描画のループの有無を指定できる。デフォルトはループしない。
-	-sオプションで波紋の広がるスピードを指定できる。デフォルトは1。
+	-sオプションで波紋の広がる速度を指定できる。デフォルトは1。
 	-mオプションで波紋の最大サイズ（半径）を指定できる。デフォルトは10。
 	-wオプションで開始までの待ち時間を指定できる。デフォルトは0。
+	-aオプションで波紋を構成する文字を指定できる。デフォルトは"■"。
 	USAGE
   exit 1
 }
@@ -38,6 +39,7 @@ opt_l='no'
 opt_s='1'
 opt_m='10'
 opt_w='0'
+opt_a='■'
 
 # 引数をパース
 i=1
@@ -53,6 +55,7 @@ do
     -s*)                 opt_s=${arg#-s}      ;;
     -m*)                 opt_m=${arg#-m}      ;;
     -w*)                 opt_w=${arg#-w}      ;;
+    -a*)                 opt_a=${arg#-a}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -118,6 +121,12 @@ if ! printf '%s' "$opt_w" | grep -Eq '^[0-9]+$'; then
   exit 91
 fi
 
+# 有効な一文字であるか判定
+if ! printf '%s' "$opt_a" | grep -q '^.$'; then
+  echo "${0##*/}: \"$opt_a\" invalid character" 1>&2
+  exit 101
+fi
+
 # パラメータを決定
 content=$opr
 height=$opt_r
@@ -128,6 +137,7 @@ isloop=$opt_l
 speed=$opt_s
 rmax=$opt_m
 waittime=$opt_w
+char=$opt_a
 
 ######################################################################
 # 本体処理
@@ -151,6 +161,7 @@ BEGIN{
   speed    = '"${speed}"';
   rmax     = '"${rmax}"';
   waittime = '"${waittime}"';
+  char     = "'"${char}"'";
 
   # 変化後文字列を分離
   split(center, cary, ",");
@@ -233,7 +244,7 @@ state == "s_run" {
 
   # フレームに波紋を上書き
   for (i = 1; i <= nall[ridx]; i++) {      
-    buf[yall[ridx,i], xall[ridx,i]] = "■";
+    buf[yall[ridx,i], xall[ridx,i]] = char;
   }
 
   # フレームを出力
