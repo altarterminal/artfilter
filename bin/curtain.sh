@@ -165,25 +165,30 @@ BEGIN {
   else                  { rstate = "rstate_fin"; }
 }
 
-lstate == "lstate_fin" && rstate == "rstate_fin" {
-  # 入力をパススルー
-  print;
-}
-
-lstate == "lstate_run" || rstate == "rstate_run" {
+lstate == "lstate_run" {
   # 前景領域の中にあるときは上書き
   if ((oy < rowidx) && (rowidx <= oy+fheight)) {
     # 左側部分の上書き
     for (i = lsidx; i <= leidx; i++) {
       if (fbuf[rowidx-oy,i-ox] != tchar) {$i = fbuf[rowidx-oy,i-ox];}
     }
+  }
 
+  # 処理は下の規則に継続
+}
+
+rstate == "rstate_run" {
+  if ((oy < rowidx) && (rowidx <= oy+fheight)) {
     # 右側部分の上書き
     for (i = rsidx; i <= reidx; i++) {
       if (fbuf[rowidx-oy,i-ox] != tchar) {$i = fbuf[rowidx-oy,i-ox];}
     }
   }
 
+  # 処理は下の規則に継続
+}
+
+lstate == "lstate_run" || rstate == "rstate_run" {
   # 出力
   print;
 
@@ -219,5 +224,13 @@ lstate == "lstate_run" || rstate == "rstate_run" {
       }
     }
   }
+
+  # 出力を行ったので次の行へ進む
+  next;
+}
+
+lstate == "lstate_fin" && rstate == "rstate_fin" {
+  # 入力をパススルー
+  print;
 }
 ' ${backfile:+"$backfile"}
