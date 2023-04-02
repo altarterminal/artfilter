@@ -151,12 +151,12 @@ BEGIN {
   rowidx = 1;
 
   # 左側部分の左端と右端のインデックスを初期化
-  lsidx = (ox < 1) ? 1 : (ox+1);
+  lsidx = ox+1;
   leidx = (fwidth%2==0) ? (fwidth/2 + ox  ) : (fwidth/2+1 + ox);
 
   # 右側部分の左端と右端のインデックスを初期化
   rsidx = (fwidth%2==0) ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
-  reidx = ((ox+fwidth) < width) ? (ox+fwidth) : width;
+  reidx = ox+fwidth;
 
   # 左端・右端のインデックスの状態によって初期状態を決定
   if   (lsidx <= leidx) { lstate = "lstate_run"; }
@@ -168,7 +168,13 @@ BEGIN {
 lstate == "lstate_run" {
   # 前景領域の中にあるときは上書き
   if ((oy < rowidx) && (rowidx <= oy+fheight)) {
-    # 左側部分の上書き
+    # 左側部分の処理
+
+    # フレーム内に範囲を修正
+    lsidx = (lsidx < 1    ) ? 1     : lsidx;
+    leidx = (width < leidx) ? width : leidx;
+
+    # フレームを上書き
     for (i = lsidx; i <= leidx; i++) {
       if (fbuf[rowidx-oy,i-ox] != tchar) {$i = fbuf[rowidx-oy,i-ox];}
     }
@@ -179,7 +185,13 @@ lstate == "lstate_run" {
 
 rstate == "rstate_run" {
   if ((oy < rowidx) && (rowidx <= oy+fheight)) {
-    # 右側部分の上書き
+    # 右側部分の処理
+
+    # フレーム内に範囲を修正
+    rsidx = (rsidx < 1    ) ? 1     : rsidx;
+    reidx = (width < reidx) ? width : reidx;
+
+    # フレームを上書き
     for (i = rsidx; i <= reidx; i++) {
       if (fbuf[rowidx-oy,i-ox] != tchar) {$i = fbuf[rowidx-oy,i-ox];}
     }
