@@ -9,6 +9,7 @@
 | displayparallel.sh   | 時間変化する図形を描画する                                                     |
 | displayseries.sh     | 経路上を動く曲線を描画する                                                     |
 | displaytrack.sh      | 経路上を動く図形を描画する                                                     |
+| displayignition.sh   | 図形を徐々に（1ピクセルずつ）描画する                                          |
 | overwrite.sh.        | 背景に対して前景を上書きする                                                   |
 | underwrite.sh        | 背景に対して前景を上書きする                                                   |
 | rotate.sh            | フレーム内の領域を回転させる                                                   |
