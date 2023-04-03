@@ -201,9 +201,11 @@ BEGIN {
     }
   }
 
+  pidx = 1; # 現在の末尾の座標のインデックス
+
   # 待ち時間があるならば「待機状態」に遷移
   if   (waittime > 0) { state = "s_wait"; wcnt = waittime; }
-  else                { state = "s_run";  tidx = 1;        }
+  else                { state = "s_run";                   }
 }
 
 ######################################################################
@@ -220,7 +222,7 @@ state == "s_wait" {
 
   # 待ち時間をすべて消費したら「描画状態」に遷移
   wcnt--;
-  if (wcnt == 0) { state = "s_run"; tidx = 1; next; }
+  if (wcnt == 0) { state = "s_run"; next; }
 }
 
 ######################################################################
@@ -236,7 +238,7 @@ state == "s_run" {
   }
 
   # 図形を上書き
-  for (i = 1; i <= tidx; i++) {
+  for (i = 1; i <= pidx; i++) {
      if (pc[i] != "Ｎ") {
        buf[py[i], px[i]] = pc[i];
      }
@@ -248,16 +250,19 @@ state == "s_run" {
     print "";
   }
 
-  # 時刻インデックスを更新
-  tidx = tidx + step;
-  if (tidx > pn) {
+  # 座標インデックスを更新
+  pidx = pidx + step;
+  if (pidx > pn) {
     # 表示を一巡したので次の状態を判定
 
+    # 座標インデックスを初期化
+    pidx = 1;
+
     # 出力をもう一度最初から行う
-    if (isloop == "yes") { state = "s_run"; tidx = 1; next; }
+    if (isloop == "yes") { state = "s_run"; next; }
 
     # 図形の出力を終了して以降の入力はそのまま出力
-    else                 { state = "s_fin";           next; }
+    else                 { state = "s_fin"; next; }
   }
 }
 
