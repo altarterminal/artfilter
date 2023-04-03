@@ -8,7 +8,7 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -r<行数> -c<列数> -p<系列ファイル> [コンテンツファイル]
-	Options : -w<待ち時間> -l -o<オフセット>
+	Options : -w<待ち時間> -l -o<オフセット> -s<ステップ>
 
 	図形を徐々に（1ピクセルずつ）描画する。
 
@@ -22,6 +22,7 @@ print_usage_and_exit () {
 	-wオプションで開始までの待ち時間を指定できる。デフォルトは0。
 	-lオプションで描画のループの有無を指定できる。デフォルトはループしない。
 	-oオプションで座標のオフセットを指定できる。デフォルトは"0,0"。
+	-sオプションで1フレームあたりの表示ピクセルの増分を指定できる。デフォルトは1。
 	USAGE
   exit 1
 }
@@ -38,6 +39,7 @@ opt_p=''
 opt_w='0'
 opt_l='no'
 opt_o='0,0'
+opt_s='1'
 
 # 引数をパース
 i=1
@@ -51,6 +53,7 @@ do
     -w*)                 opt_w=${arg#-w}      ;;
     -l)                  opt_l='yes'          ;;
     -o*)                 opt_o=${arg#-o}      ;;
+    -s*)                 opt_s=${arg#-s}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -109,6 +112,12 @@ if ! printf '%s' "$opt_o" | grep -Eq '^[0-9]+,[0-9]+$'; then
   exit 71
 fi
 
+# 有効な数値であるか判定
+if ! printf '%s' "$opt_w" | grep -Eq '^[0-9]+$'; then
+  echo "${0##*/}: \"$opt_w\" invalid number" 1>&2
+  exit 81
+fi
+
 # パラメータを決定
 content=$opr
 width=$opt_c
@@ -117,6 +126,7 @@ pfile=$opt_p
 waittime=$opt_w
 isloop=$opt_l
 offsets=$opt_o
+step=$opt_s
 
 ######################################################################
 # 本体処理
@@ -130,6 +140,7 @@ BEGIN {
   waittime  = '"${waittime}"';
   isloop    = "'"${isloop}"'";
   offsets   = "'"${offsets}"'";
+  step      = '"${step}"';
 
   # オフセット値を取得
   split(offsets, oary, ",");
@@ -186,7 +197,7 @@ BEGIN {
       # フィールド数が不正な場合はエラーを出力して終了
       msg = "'"${0##*/}"': invalid number of field (" pn+1 ")";
       print msg > "/dev/stderr";
-      exit 81;
+      exit 91;
     }
   }
 
@@ -238,7 +249,7 @@ state == "s_run" {
   }
 
   # 時刻インデックスを更新
-  tidx++;
+  tidx = tidx + step;
   if (tidx > pn) {
     # 表示を一巡したので次の状態を判定
 
