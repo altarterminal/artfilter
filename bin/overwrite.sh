@@ -9,7 +9,6 @@ print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -r<行数> -f<前景ファイル> [背景ファイル]
 	Options : -o<オフセット> -c<透過部分のマーカー>
-	Version :
 
 	背景に対して前景を上書きする。
 
