@@ -252,7 +252,14 @@ state == "s_run" {
 
   # 座標インデックスを更新
   pidx = pidx + step;
-  if (pidx > pn) {
+  if (pidx < pn) {
+    # 表示の途中なので何もしない
+  }
+  else if (pidx <  (pn + step)) {
+    # ちょうど末尾まで表示できるように調整
+    pidx = pn;
+  }
+  else if (pidx == (pn + step)) {
     # 表示を一巡したので次の状態を判定
 
     # 座標インデックスを初期化
