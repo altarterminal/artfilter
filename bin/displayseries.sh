@@ -74,13 +74,13 @@ else
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_r" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_r" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_r\" invalid number" 1>&2
   exit 31
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_c" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_c" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_c\" invalid number" 1>&2
   exit 41
 fi
@@ -97,13 +97,13 @@ else
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_w" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_w" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_w\" invalid number" 1>&2
   exit 61
 fi
 
 # 有効な数値の組であるか判定
-if ! printf '%s' "$opt_o" | grep -Eq '^[0-9]+,[0-9]+$'; then
+if ! printf '%s\n' "$opt_o" | grep -Eq '^[0-9]+,[0-9]+$'; then
   echo "${0##*/}: \"$opt_o\" invalid pair of number" 1>&2
   exit 71
 fi

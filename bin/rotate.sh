@@ -41,7 +41,7 @@ do
     -r*)                 opt_r=${arg#-r}      ;;
     -p*)                 opt_p=${arg#-p}      ;;
     *)
-      if [ $i -eq $# ] && [ -z "$opr" ] ; then
+      if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
       else
         echo "${0##*/}: invalid args" 1>&2
@@ -64,13 +64,13 @@ else
 fi
 
 # 有効なパラメータ指定か確認
-if ! printf '%s' "$opt_r" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_r" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_r\" invalid row number" 1>&2
   exit 31
 fi
 
 # 有効なパラメータ指定か確認
-if ! printf '%s' "$opt_p"                          |
+if ! printf '%s\n' "$opt_p"                        |
      grep -Eq '^-?[0-9]+,-?[0-9]+,[0-9]+,-?[0-9]+$'; then
   echo "${0##*/}: \"$opr\" invalid parameter" 1>&2
   exit 41

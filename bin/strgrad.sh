@@ -45,7 +45,7 @@ do
     -c*)                 opt_c=${arg#-c}      ;;
     -l)                  opt_l='yes'          ;;
     *)
-      if [ $i -eq $# ] && [ -z "$opr" ] ; then
+      if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
       else
         echo "${0##*/}: invalid args" 1>&2
@@ -68,25 +68,25 @@ else
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_r" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_r" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_r\" invalid number" 1>&2
   exit 31
 fi
 
 # 1文字以上であるか判定
-if ! printf '%s' "$opt_s" | grep -Eq '^.+$'; then
+if ! printf '%s\n' "$opt_s" | grep -Eq '^.+$'; then
   echo "${0##*/}: \"$opt_s\" invalid string" 1>&2
   exit 41
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_f" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_f" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_f\" invalid number" 1>&2
   exit 51
 fi
 
 # 1文字であるか判定
-if ! printf '%s' "$opt_c" | grep -Eq '^.$'; then
+if ! printf '%s\n' "$opt_c" | grep -Eq '^.$'; then
   echo "${0##*/}: \"$opt_c\" invalid character" 1>&2
   exit 61
 fi

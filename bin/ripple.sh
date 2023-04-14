@@ -80,49 +80,49 @@ else
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_r" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_r" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_r\" invalid number" 1>&2
   exit 31
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_c" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_c" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_c\" invalid number" 1>&2
   exit 41
 fi
 
 # 有効な数値の組であるか判定
-if ! printf '%s' "$opt_p" | grep -Eq '^-?[0-9]+,-?[0-9]+$'; then
+if ! printf '%s\n' "$opt_p" | grep -Eq '^-?[0-9]+,-?[0-9]+$'; then
   echo "${0##*/}: \"$opt_p\" invalid number pair" 1>&2
   exit 51
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_f" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_f" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_f\" invalid number" 1>&2
   exit 61
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_s" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_s" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_s\" invalid number" 1>&2
   exit 71
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_m" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_m" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_m\" invalid number" 1>&2
   exit 81
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s' "$opt_w" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_w" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_w\" invalid number" 1>&2
   exit 91
 fi
 
 # 有効な一文字であるか判定
-if ! printf '%s' "$opt_a" | grep -q '^.$'; then
+if ! printf '%s\n' "$opt_a" | grep -q '^.$'; then
   echo "${0##*/}: \"$opt_a\" invalid character" 1>&2
   exit 101
 fi
