@@ -188,10 +188,10 @@ BEGIN {
       ctmp = pary[3];
 
       # 座標を記録
-      px[cn] = (xtmp == "n") ? xtmp : (xtmp + xoffset);
-      py[cn] = (ytmp == "n") ? ytmp : (ytmp + yoffset);
+      px[pn] = (xtmp == "n") ? xtmp : (xtmp + xoffset);
+      py[pn] = (ytmp == "n") ? ytmp : (ytmp + yoffset);
       # 色アルファベットを全角に変換して記録
-      pc[cn] = h2z[ctmp];
+      pc[pn] = h2z[ctmp];
     }
     else {
       # フィールド数が不正な場合はエラーを出力して終了
