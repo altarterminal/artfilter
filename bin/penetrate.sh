@@ -7,8 +7,8 @@ set -eu
 
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
-	Usage   : ${0##*/} -r<行数> -c<列数> -p<パラメータ> -a<別シーンファイル> [シーンファイル]
-	Options : -d<増減>
+	Usage   : ${0##*/} -r<行数> -c<列数> -a<別シーンファイル> [シーンファイル]
+	Options : -p<パラメータ> -d<増減>
 
 	あるシーンの領域内に別シーンを上書きする。
 	２つのシーンの幅と高さは一致する必要がある。
@@ -18,9 +18,9 @@ print_usage_and_exit () {
 
 	-rオプションでフレームの行数を指定する。
 	-cオプションでフレームの列数を指定する。
-	-pオプションで領域のパラメータを指定する。
 	-aオプションでアナザーシーンファイルを指定する。
-	-dオプションで増減を指定する。デフォルトは"1,1"。
+	-pオプションで領域のパラメータを指定できる。デフォルトは"1,1,1,1"
+	-dオプションで増減を指定できる。デフォルトは"1,1"。
 	USAGE
   exit 1
 }
@@ -33,8 +33,8 @@ print_usage_and_exit () {
 opr=''
 opt_r=''
 opt_c=''
-opt_p=''
 opt_a=''
+opt_p='1,1,1,1'
 opt_d='1,1'
 
 # 引数をパース
@@ -45,8 +45,8 @@ do
     -h|--help|--version) print_usage_and_exit ;;
     -r*)                 opt_r=${arg#-r}      ;;
     -c*)                 opt_c=${arg#-c}      ;;
-    -p*)                 opt_p=${arg#-p}      ;;
     -a*)                 opt_a=${arg#-a}      ;;
+    -p*)                 opt_p=${arg#-p}      ;;
     -d*)                 opt_d=${arg#-d}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
@@ -80,40 +80,40 @@ fi
 # 有効な数値であるか判定
 if ! printf '%s\n' "$opt_c" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_c\" invalid number" 1>&2
-  exit 31
+  exit 41
+fi
+
+# 読み取り可能な通常ファイルであるか判定
+if   [ "_$opt_a" = '_' ] || [ "_$opt_a" = '_-' ]; then     
+  echo "${0##*/}: forground content cannot be a file" 1>&2
+  exit 51
+elif [ ! -f "$opt_a"   ] || [ ! -r "$opt_a"    ]; then
+  echo "${0##*/}: \"$opt_a\" cannot be opened" 1>&2
+  exit 52
+else
+  :
 fi
 
 # 有効な数値であるか判定
 if ! printf '%s\n' "$opt_p"                    |
    grep -Eq '^-?[0-9]+,-?[0-9]+,[0-9]+,[0-9]+$'; then
   echo "${0##*/}: \"$opt_p\" invalid parameter" 1>&2
-  exit 31
-fi
-
-# 読み取り可能な通常ファイルであるか判定
-if   [ "_$opt_a" = '_' ] || [ "_$opt_a" = '_-' ]; then     
-  echo "${0##*/}: forground content cannot be a file" 1>&2
-  exit 41
-elif [ ! -f "$opt_a"   ] || [ ! -r "$opt_a"    ]; then
-  echo "${0##*/}: \"$opt_a\" cannot be opened" 1>&2
-  exit 42
-else
-  :
+  exit 61
 fi
 
 # 有効な数値の組であるか判定
 if ! printf '%s\n' "$opt_d"                        |
    grep -Eq '^-?[0-9](\.[0-9])?,-?[0-9](\.[0-9])?$'; then
   echo "${0##*/}: \"$opt_d\" invalid number" 1>&2
-  exit 51
+  exit 71
 fi
 
 # パラメータを決定
 onefile=$opr
 height=$opt_r
 width=$opt_c
-param=$opt_p
 anofile=$opt_a
+param=$opt_p
 delta=$opt_d
 
 ######################################################################
@@ -178,7 +178,7 @@ state == "s_run" {
   # 現在の領域の位置を判断
   if (xcmini > width  || xcmaxi < 1 ||
       ycmini > height || ycmaxi < 1 ){
-    # 完全にフレーム外なので上書きしない
+    # 領域が完全にフレーム外なので上書きしない
   }
   else {
     # 一部または全部の領域がフレーム内にあるので上書きする
@@ -228,7 +228,7 @@ state == "s_run" {
       # フィルタ終了状態に遷移
       state = "s_fin";
 
-      # このパターンを終了
+      # 現入力に関する処理を終了
       next;
     }
   }
