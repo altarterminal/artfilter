@@ -8,12 +8,12 @@
 | displayseries.sh     | 経路上を動く曲線を描画する                                                     |
 | displaytrack.sh      | 経路上を動く図形を描画する                                                     |
 | displayignition.sh   | 図形を徐々に（1ピクセルずつ）描画する                                          |
-| overwrite.sh.        | 背景に対して前景を上書きする                                                   |
+| overwrite.sh         | 背景に対して前景を上書きする                                                   |
 | underwrite.sh        | 背景に対して前景を上書きする                                                   |
 | rotate.sh            | フレーム内の領域を回転させる                                                   |
 | strgrad.sh           | マーカーの文字を徐々に変化させる                                               |
 | ripple.sh            | 徐々に大きくなる円を描画する                                                   |
-| penetrate.sh         | 矩形領域に別シーンを挿入する                                                   |
+| penetrate.sh         | 移動する矩形領域に別シーンを挿入する                                           |
 
 # 事前準備
 ## 実行環境
