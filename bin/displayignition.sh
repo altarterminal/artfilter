@@ -239,9 +239,7 @@ state == "s_run" {
 
   # 図形を上書き
   for (i = 1; i <= pidx; i++) {
-     if (pc[i] != "Ｎ") {
-       buf[py[i], px[i]] = pc[i];
-     }
+     if (pc[i] != "Ｎ") { buf[py[i], px[i]] = pc[i]; }
   }
 
   # フレームバッファ出力
@@ -278,7 +276,24 @@ state == "s_run" {
 ######################################################################
 
 state == "s_fin" {
-  # 入力をパススルー
-  print;
+  # 常にすべてを上書き
+
+  # フレームを入力
+  for(j=1;j<=width;j++){buf[1,j]=$j;}
+  for (i = 2; i <= height; i++) {
+    if   (getline > 0) { for(j=1;j<=width;j++){buf[i,j]=$j;} }
+    else               { exit;                               }
+  }
+
+  # 図形を上書き
+  for (i = 1; i <= pn; i++) {
+     if (pc[i] != "Ｎ") { buf[py[i], px[i]] = pc[i]; }
+  }
+
+  # フレームバッファ出力
+  for (i = 1; i <= height; i++) {
+    for (j = 1; j <= width; j++) { printf "%s", buf[i, j]; }
+    print "";
+  }
 }
 ' ${content:+"$content"}
