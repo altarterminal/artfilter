@@ -11,14 +11,14 @@ print_usage_and_exit () {
 	Options : -o<オフセット> -c<透過部分のマーカー> -i
 
 	背景に対して前景を上書きする。
-	前景は中央から徐々に開き、最終的に背景が完全に表示されるようにする。
+	表示される前景の領域は徐々に減少し、最終的に背景が完全に表示されるようにする。
 
 	-rオプションでフレームの行数を指定する。
 	-cオプションでフレームの列数を指定する。
 	-fオプションで前景のファイルを指定する。
 	-oオプションで前景のオフセットを指定できる。デフォルトは"0,0"。
 	-tオプションで前景中の透過領域を示す文字を指定できる。デフォルトは□。
-	-iオプションで徐々に閉じ、最終的に前景が完全に表示されるようにする。
+	-iオプションで開く方向を逆にする。デフォルトは中央から両側へ開く。
 	USAGE
   exit 1
 }
@@ -157,49 +157,32 @@ BEGIN {
   rsidx = (fwidth%2==0) ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
   reidx = ox+fwidth;
 
-  # 左端・右端のインデックスの状態によって初期状態を決定
-  if   (lsidx <= leidx) { lstate = "lstate_run"; }
-  else                  { lstate = "lstate_fin"; }
-  if   (rsidx <= reidx) { rstate = "rstate_run"; }
-  else                  { rstate = "rstate_fin"; }
+  if (lsidx < 1 || width < reidx) {
+    # 前景の一部または全部が領域外にある場合はエラー終了
+    msg = "'"${0##*/}"': invalid foreground location";
+    print msg > "/dev/stderr";
+    exit 81;
+  }
+
+  # 初期状態を設定
+  state = "state_run";
 }
 
-lstate == "lstate_run" {
-  # 前景領域の中にあるときは上書き
+state == "state_run" {
   if ((oy < rowidx) && (rowidx <= oy+fheight)) {
-    # 左側部分の処理
+    # 前景領域の中にあるときは上書き
 
-    # フレーム内に範囲を修正
-    lsidx = (lsidx < 1    ) ? 1     : lsidx;
-    leidx = (width < leidx) ? width : leidx;
-
-    # フレームを上書き
+    # 左側部分の上書き
     for (i = lsidx; i <= leidx; i++) {
       if (fbuf[rowidx-oy,i-ox] != tchar) {$i = fbuf[rowidx-oy,i-ox];}
     }
-  }
 
-  # 処理は下の規則に継続
-}
-
-rstate == "rstate_run" {
-  if ((oy < rowidx) && (rowidx <= oy+fheight)) {
-    # 右側部分の処理
-
-    # フレーム内に範囲を修正
-    rsidx = (rsidx < 1    ) ? 1     : rsidx;
-    reidx = (width < reidx) ? width : reidx;
-
-    # フレームを上書き
+    # 右側部分の上書き
     for (i = rsidx; i <= reidx; i++) {
       if (fbuf[rowidx-oy,i-ox] != tchar) {$i = fbuf[rowidx-oy,i-ox];}
     }
   }
 
-  # 処理は下の規則に継続
-}
-
-lstate == "lstate_run" || rstate == "rstate_run" {
   # 出力
   print;
 
@@ -211,28 +194,12 @@ lstate == "lstate_run" || rstate == "rstate_run" {
     # 行インデックスを先頭に戻す
     rowidx = 1;
 
-    # 左側部分の更新
-    if (lstate == "lstate_run") {
-      # 処理が終了したら終了状態に遷移
-      if   (lsidx == leidx) { lstate = "lstate_fin"; }
-
-      # 処理が継続なら端点のインデックスを更新
-      else                  {
-        if   (isrev == "no") { leidx--; }
-        else                 { lsidx++; }
-      }
-    }
-
-    # 右側部分の更新
-    if (rstate == "rstate_run") {
-      # 処理が終了したら終了状態に遷移
-      if   (rsidx == reidx) { rstate = "rstate_fin"; }
-
-      # 処理が継続なら端点のインデックスを更新
-      else                  {
-        if   (isrev == "no") { rsidx++; }
-        else                 { reidx--; }
-      }
+    # 処理が終了したら終了状態に遷移（左側部分で判定）
+    if (lsidx == leidx) { state = "state_fin"; }
+    # 処理が継続なら端点のインデックスを更新
+    else                {
+      if   (isrev == "no") { leidx--; rsidx++; }
+      else                 { lsidx++; reidx--; }
     }
   }
 
@@ -240,7 +207,7 @@ lstate == "lstate_run" || rstate == "rstate_run" {
   next;
 }
 
-lstate == "lstate_fin" && rstate == "rstate_fin" {
+state == "state_fin" {
   # 入力をパススルー
   print;
 }
