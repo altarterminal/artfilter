@@ -229,7 +229,16 @@ state == "state_run" {
 }
 
 state == "state_fin" {
-  # 入力をパススルー
+  # 前景領域の中にあるときは上書き
+  if ((oy < rowidx) && (rowidx <= oy+fheight)) {
+    for (i = lsidx; i <= reidx; i++) {
+      if (fbuf[rowidx-oy,i-ox] != tchar) {$i = fbuf[rowidx-oy,i-ox];}
+    }
+  }
+
   print;
+
+  rowidx++;
+  if (rowidx > height) { rowidx = 1; }
 }
 ' ${backfile:+"$backfile"}
