@@ -149,6 +149,9 @@ BEGIN {
   # 現在の行インデックスを初期化
   rowidx = 1;
 
+  # 幅が奇数or偶数のマーク
+  iseven = (fwidth%2==0) ? "yes" : "no";
+
   if (isrev == "no") {
     # 外側から中央へ閉じる
 
@@ -164,12 +167,12 @@ BEGIN {
     # 中央から外側へ閉じる
 
     # 左側部分のインデックスを初期化
-    lsidx = (fwidth%2==0) ? (fwidth/2 + ox  ) : (fwidth/2+1 + ox);
-    leidx = (fwidth%2==0) ? (fwidth/2 + ox  ) : (fwidth/2+1 + ox);
+    lsidx = (iseven=="yes") ? (fwidth/2 + ox  ) : (fwidth/2+1 + ox);
+    leidx = (iseven=="yes") ? (fwidth/2 + ox  ) : (fwidth/2+1 + ox);
 
     # 右側部分のインデックスを初期化
-    rsidx = (fwidth%2==0) ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
-    reidx = (fwidth%2==0) ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
+    rsidx = (iseven=="yes") ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
+    reidx = (iseven=="yes") ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
   }
 
   if (lsidx < 1 || width < reidx) {
@@ -212,8 +215,8 @@ state == "state_run" {
     # 現在の表示の長さを計算
     llen = leidx - lsidx + 1;
     rlen = reidx - rsidx + 1;
-    if   (fwidth%2==0) { plen = llen + rlen;     }
-    else               { plen = llen + rlen - 1; }
+    if   (iseven=="yes") { plen = llen + rlen;     }
+    else                 { plen = llen + rlen - 1; }
 
     # 処理が終了したら終了状態に遷移（左側部分で判定）
     if (plen == fwidth) { state = "state_fin"; }
