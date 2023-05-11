@@ -34,7 +34,7 @@ opt_c=''
 opt_f=''
 opt_o='0,0'
 opt_t='□'
-opt_i='no'
+opt_i='yes'
 
 # 引数をパース
 i=1
@@ -47,7 +47,7 @@ do
     -f*)                 opt_f=${arg#-f}      ;;
     -o*)                 opt_o=${arg#-o}      ;;
     -t*)                 opt_t=${arg#-t}      ;;
-    -i)                  opt_i='yes'          ;;
+    -i)                  opt_i='no'           ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -113,7 +113,7 @@ width=$opt_c
 forfile=$opt_f
 offset=$opt_o
 tchar=$opt_t
-isrev=$opt_i
+isnormal=$opt_i
 
 ######################################################################
 # 本体処理
@@ -122,12 +122,12 @@ isrev=$opt_i
 gawk -v FS='' -v OFS='' '
 BEGIN {
   # パラメータを入力
-  height  = '"${height}"';
-  width   = '"${width}"';
-  forfile = "'"${forfile}"'";
-  offset  = "'"${offset}"'";
-  tchar   = "'"${tchar}"'";
-  isrev   = "'"${isrev}"'";
+  height   = '"${height}"';
+  width    = '"${width}"';
+  forfile  = "'"${forfile}"'";
+  offset   = "'"${offset}"'";
+  tchar    = "'"${tchar}"'";
+  isnormal = "'"${isnormal}"'";
 
   # オフセットを分離
   split(offset, oary, ",");
@@ -198,8 +198,8 @@ state == "state_run" {
     if (lsidx == leidx) { state = "state_fin"; }
     # 処理が継続なら端点のインデックスを更新
     else                {
-      if   (isrev == "no") { leidx--; rsidx++; }
-      else                 { lsidx++; reidx--; }
+      if   (isnormal == "yes") { leidx--; rsidx++; }
+      else                     { lsidx++; reidx--; }
     }
   }
 
