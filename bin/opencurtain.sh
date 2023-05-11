@@ -149,12 +149,15 @@ BEGIN {
   # 現在の行インデックスを初期化
   rowidx = 1;
 
+  # 幅が奇数or偶数のマーク
+  iseven = (fwidth%2==0) ? "yes" : "no";
+
   # 左側部分の左端と右端のインデックスを初期化
   lsidx = ox+1;
-  leidx = (fwidth%2==0) ? (fwidth/2 + ox  ) : (fwidth/2+1 + ox);
+  leidx = (iseven=="yes") ? (fwidth/2 + ox  ) : (fwidth/2+1 + ox);
 
   # 右側部分の左端と右端のインデックスを初期化
-  rsidx = (fwidth%2==0) ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
+  rsidx = (iseven=="yes") ? (fwidth/2 + ox+1) : (fwidth/2+1 + ox);
   reidx = ox+fwidth;
 
   if (lsidx < 1 || width < reidx) {
