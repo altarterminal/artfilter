@@ -104,9 +104,6 @@ tchar=$opt_c
 # 本体処理
 ######################################################################
 
-# コンテンツを入力
-cat ${backfile:+"$backfile"}                                         |
-
 gawk -v FS='' -v OFS='' '
 BEGIN {
   height  = '"${height}"';
@@ -154,4 +151,4 @@ BEGIN {
   # 出力
   print;
 }
-'
+' ${backfile:+"$backfile"}
