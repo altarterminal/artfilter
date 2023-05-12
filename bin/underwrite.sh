@@ -129,13 +129,10 @@ BEGIN {
   bwidth  = n;
 
   # パラメータを初期化
-  rowidx = 0;
+  rowidx = 1;
 }
 
 {
-  # 現在の上書き対象の行インデックスを計算
-  rowidx = (rowidx < height) ? (rowidx+1) : 1;
-
   # 背景領域の中にあるときは上書き
   if ((oy < rowidx) && (rowidx <= oy+bheight)) {
     sidx = (ox < 1) ? 1 : (ox+1);
@@ -150,5 +147,8 @@ BEGIN {
 
   # 出力
   print;
+
+  # 行インデックスを更新
+  rowidx++; if (rowidx > height) { rowidx = 1; }
 }
 ' ${forfile:+"$forfile"}
