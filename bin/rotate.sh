@@ -7,13 +7,14 @@ set -eu
 
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
-	Usage   : ${0##*/} -r<行数> -p<パラメータ> [コンテンツ]
+	Usage   : ${0##*/} -r<行数> -c<列数> -p<パラメータ> [コンテンツ]
 	Options :
 
 	<パラメータ>で指定した条件でフレーム内の領域を回転させる。
 	回転量はフレームの進行に対して累積する。
 
 	-rオプションでフレームの行数を指定する。
+	-rオプションでフレームの列数を指定する。
 	-pオプションで回転のパラメータを指定する。
 
 	パラメータは以下の形式で指定する。
@@ -30,6 +31,7 @@ print_usage_and_exit () {
 # 変数を初期化
 opr=''
 opt_r=''
+opt_c=''
 opt_p=''
 
 # 引数をパース
@@ -39,6 +41,7 @@ do
   case "$arg" in
     -h|--help|--version) print_usage_and_exit ;;
     -r*)                 opt_r=${arg#-r}      ;;
+    -c*)                 opt_c=${arg#-c}      ;;
     -p*)                 opt_p=${arg#-p}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
@@ -63,35 +66,40 @@ else
   :
 fi
 
-# 有効なパラメータ指定か確認
+# 有効な数値であるか判定
 if ! printf '%s\n' "$opt_r" | grep -Eq '^[0-9]+$'; then
   echo "${0##*/}: \"$opt_r\" invalid row number" 1>&2
   exit 31
 fi
 
-# 有効なパラメータ指定か確認
+# 有効な数値であるか判定
+if ! printf '%s\n' "$opt_c" | grep -Eq '^[0-9]+$'; then
+  echo "${0##*/}: \"$opt_c\" invalid col number" 1>&2
+  exit 41
+fi
+
+# 有効なパラメータ指定か判定
 if ! printf '%s\n' "$opt_p"                        |
      grep -Eq '^-?[0-9]+,-?[0-9]+,[0-9]+,-?[0-9]+$'; then
   echo "${0##*/}: \"$opr\" invalid parameter" 1>&2
-  exit 41
+  exit 51
 fi
   
 # パラメータを決定
 content=$opr
 height=$opt_r
+width=$opt_c
 param=$opt_p
 
 ######################################################################
 # 本体処理
 ######################################################################
 
-# コンテンツを入力
-cat ${content:+"$content"}                                           |
-
 gawk -v FS='' -v OFS='' '
 BEGIN {
   param  = "'"${param}"'";
   height = '"${height}"';
+  width  = '"${width}"';
 
   # パラメータを分離
   split(param, pary, ",");
@@ -108,6 +116,9 @@ BEGIN {
   xmax = x0 + r0;
   ymin = y0 - r0;
   ymax = y0 + r0;
+
+  # 定数を定義
+  pi = 3.141592;
 }
 
 {
@@ -115,25 +126,22 @@ BEGIN {
   t = (t + t0) % 360;
 
   # 三角関数の値を計算
-  st = sin((t * 3.1415) / 180);
-  ct = cos((t * 3.1415) / 180);
+  st = sin((t * pi) / 180);
+  ct = cos((t * pi) / 180);
 
-  # 1フレームを入力バッファに保存
+  # フレームを入力バッファに保存
   for (i = 1; i <= NF; i++) { ibuf[1,i] = $i; }
   rcnt = 1;
   while (rcnt < height) {
     # 入力がなければ終了
     if (getline <= 0) { exit; }
 
-    # 1行入力に成功したのでカウンタをカウントアップ
+    # 1行入力に成功したのでカウントアップ
     rcnt++;
 
     # 入力した行をバッファに保存
     for (i = 1; i <= NF; i++) { ibuf[rcnt,i] = $i; }
   }
-
-  # 横幅を取得
-  width = NF;
 
   # 出力バッファを作成
   for (i = 1; i <= height; i++) {
@@ -181,10 +189,8 @@ BEGIN {
 
   # 出力
   for (i = 1; i <= height; i++) {
-    for (j = 1; j <= width; j++) {
-      printf "%s", obuf[i,j];
-    }
-    print ""
+    for (j = 1; j <= width; j++) { printf "%s", obuf[i,j]; }
+    print "";
   }
 }
-'
+' ${content:+"$content"}
