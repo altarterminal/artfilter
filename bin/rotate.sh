@@ -97,6 +97,7 @@ param=$opt_p
 
 gawk -v FS='' -v OFS='' '
 BEGIN {
+  # パラメータを設定
   param  = "'"${param}"'";
   height = '"${height}"';
   width  = '"${width}"';
@@ -120,10 +121,9 @@ BEGIN {
   # 領域判定のために利用する値
   r2 = r0 * r0;
 
-  # ターゲット座標列を生成.
+  # ターゲット座標列を生成
   for (j = r0*(-1); j <= r0; j++) {
     for (i = r0*(-1); i <= r0; i++) {
-      # 対象領域内であるか判定
       if (i*i + j*j <= r2) {
         tn++;
         tx[tn] = i + x0;
@@ -137,14 +137,6 @@ BEGIN {
 }
 
 {
-  # 角度を更新
-  tdeg = (tdeg + t0) % 360;
-  trad = tdeg * radPdeg;
-
-  # 三角関数の値を計算
-  st = sin(trad);
-  ct = cos(trad);
-
   # フレームを入力バッファに保存
   rcnt = 1;
   for (i = 1; i <= width; i++) { ibuf[rcnt,i] = $i; }
@@ -166,6 +158,14 @@ BEGIN {
     }
   }
 
+  # 角度を更新
+  tdeg = (tdeg + t0) % 360;
+  trad = tdeg * radPdeg;
+
+  # 三角関数の値を計算
+  st = sin(trad);
+  ct = cos(trad);
+
   # ターゲットの画素を回転
   for (i = 1; i <= tn; i++) {
     # 原点中心の座標に平行移動
@@ -181,7 +181,7 @@ BEGIN {
     yidx = int((y_r + y0) + 0.5);
 
     # 参照先の範囲を確認
-    if (1<=xidx && xidx<=width && 1<=yidx && yidx <= height) {
+    if (1<=xidx && xidx<=width && 1<=yidx && yidx<=height) {
       obuf[ty[i],tx[i]] = ibuf[yidx,xidx];
     }
     else {
