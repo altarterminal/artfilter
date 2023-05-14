@@ -119,6 +119,10 @@ BEGIN {
 
   # 定数を定義
   pi = 3.141592;
+  radPdeg = pi / 180.0;
+
+  # パラメータを初期化
+  t = 0;
 }
 
 {
@@ -126,11 +130,11 @@ BEGIN {
   t = (t + t0) % 360;
 
   # 三角関数の値を計算
-  st = sin((t * pi) / 180);
-  ct = cos((t * pi) / 180);
+  st = sin(t * radPdeg);
+  ct = cos(t * radPdeg);
 
   # フレームを入力バッファに保存
-  for (i = 1; i <= NF; i++) { ibuf[1,i] = $i; }
+  for (i = 1; i <= width; i++) { ibuf[1,i] = $i; }
   rcnt = 1;
   while (rcnt < height) {
     # 入力がなければ終了
@@ -140,7 +144,7 @@ BEGIN {
     rcnt++;
 
     # 入力した行をバッファに保存
-    for (i = 1; i <= NF; i++) { ibuf[rcnt,i] = $i; }
+    for (i = 1; i <= width; i++) { ibuf[rcnt,i] = $i; }
   }
 
   # 出力バッファを作成
@@ -151,11 +155,11 @@ BEGIN {
   }
 
   # 対象領域の画素を回転
-  for (i = ymin; i <= ymax; i++) {
-    for (j = xmin; j <= xmax; j++) {
+  for (j = ymin; j <= ymax; j++) {
+    for (i = xmin; i <= xmax; i++) {
       # 原点中心の座標に平行移動
-      x_o = j - x0;
-      y_o = i - y0;
+      x_o = i - x0;
+      y_o = j - y0;
 
       # 対象領域内であるか判定
       if (x_0*x_0 + y_0*y_0 > r2) {
@@ -178,18 +182,18 @@ BEGIN {
 
         # もし元画像中の範囲外であるならば無効文字で埋める
         if (xidx < 1 || width < xidx || yidx < 1 || height < yidx) {
-          obuf[i,j] = "□"
+          obuf[j,i] = "□"
         }
         else {
-          obuf[i,j] = ibuf[yidx,xidx];
+          obuf[j,i] = ibuf[yidx,xidx];
         }
       }
     }
   }
 
   # 出力
-  for (i = 1; i <= height; i++) {
-    for (j = 1; j <= width; j++) { printf "%s", obuf[i,j]; }
+  for (j = 1; j <= height; j++) {
+    for (i = 1; i <= width; i++) { printf "%s", obuf[j,i]; }
     print "";
   }
 }
