@@ -108,9 +108,6 @@ BEGIN {
   r0 = pary[3];
   t0 = pary[4];
 
-  # 領域判定のために利用する値（半径の２乗）
-  r2 = r0 * r0;
-
   # 領域判定の暫定値（円を含む正方形）
   xmin = x0 - r0;
   xmax = x0 + r0;
@@ -120,6 +117,30 @@ BEGIN {
   # 定数を定義
   pi = 3.141592;
   radPdeg = pi / 180.0;
+
+  # 領域判定のために利用する値
+  r2 = r0 * r0;
+
+  # ターゲット座標列に関する変数
+  tx[1];
+  ty[1];
+  tn = 0;
+
+  # ターゲット座標列を生成
+  for (j = ymin; j <= ymax; j++) {
+    for (i = xmin; i <= xmax; i++) {
+      # 原点中心の座標に平行移動
+      x_o = i - x0;
+      y_o = j - y0;
+
+      # 対象領域内であるか判定
+      if (x_0*x_0 + y_0*y_0 <= r2) {
+        tn++;
+        tx[tn] = i;
+        ty[tn] = j;
+      }
+    }
+  }
 
   # パラメータを初期化
   tdeg = 0;
@@ -155,36 +176,26 @@ BEGIN {
     }
   }
 
-  # 対象領域の画素を回転
-  for (j = ymin; j <= ymax; j++) {
-    for (i = xmin; i <= xmax; i++) {
-      # 原点中心の座標に平行移動
-      x_o = i - x0;
-      y_o = j - y0;
+  # ターゲットの画素を回転
+  for (i = 1; i <= tn; i++) {
+    # 原点中心の座標に平行移動
+    x_o = tx[i] - x0;
+    y_o = ty[i] - y0;
 
-      # 対象領域内であるか判定
-      if (x_0*x_0 + y_0*y_0 > r2) {
-        # 対象領域外であるので何もしない
-      }
-      else {
-        # 対象領域内であるので回転させる
+    # 回転処理（x軸正は右方向＆y軸正は下方向なので注意）
+    x_r = x_o * ct + y_o * st * (-1);
+    y_r = x_o * st + y_o * ct;
 
-        # 回転処理（x軸正は右方向＆y軸正は下方向なので注意）
-        x_r = x_o * ct + y_o * st * (-1);
-        y_r = x_o * st + y_o * ct;
+    # もとの位置に並行移動＆整数化（四捨五入）
+    xidx = int((x_r + x0) + 0.5);
+    yidx = int((y_r + y0) + 0.5);
 
-        # もとの位置に並行移動＆整数化（四捨五入）
-        xidx = int((x_r + x0) + 0.5);
-        yidx = int((y_r + y0) + 0.5);
-
-        # 参照先の範囲を確認
-        if (1<=xidx && xidx<=width && 1<=yidx && yidx <= height) {
-          obuf[j,i] = ibuf[yidx,xidx];
-        }
-        else {
-          obuf[j,i] = "□";
-        }
-      }
+    # 参照先の範囲を確認
+    if (1<=xidx && xidx<=width && 1<=yidx && yidx <= height) {
+      obuf[ty[i],tx[i]] = ibuf[yidx,xidx];
+    }
+    else {
+      obuf[ty[i],tx[i]] = "□";
     }
   }
 
