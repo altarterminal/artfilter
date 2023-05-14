@@ -122,20 +122,21 @@ BEGIN {
   radPdeg = pi / 180.0;
 
   # パラメータを初期化
-  t = 0;
+  tdeg = 0;
 }
 
 {
   # 角度を更新
-  t = (t + t0) % 360;
+  tdeg = (tdeg + t0) % 360;
+  trad = tdeg * radPdeg;
 
   # 三角関数の値を計算
-  st = sin(t * radPdeg);
-  ct = cos(t * radPdeg);
+  st = sin(trad);
+  ct = cos(trad);
 
   # フレームを入力バッファに保存
-  for (i = 1; i <= width; i++) { ibuf[1,i] = $i; }
   rcnt = 1;
+  for (i = 1; i <= width; i++) { ibuf[rcnt,i] = $i; }
   while (rcnt < height) {
     # 入力がなければ終了
     if (getline <= 0) { exit; }
@@ -148,9 +149,9 @@ BEGIN {
   }
 
   # 出力バッファを作成
-  for (i = 1; i <= height; i++) {
-    for (j = 1; j <= width; j++) {
-      obuf[i,j] = ibuf[i,j];
+  for (j = 1; j <= height; j++) {
+    for (i = 1; i <= width; i++) {
+      obuf[j,i] = ibuf[j,i];
     }
   }
 
@@ -168,24 +169,20 @@ BEGIN {
       else {
         # 対象領域内であるので回転させる
 
-        # 回転処理
+        # 回転処理（x軸正は右方向＆y軸正は下方向なので注意）
         x_r = x_o * ct + y_o * st * (-1);
         y_r = x_o * st + y_o * ct;
 
-        # もとの座標に平行移動
-        x_s = x_r + x0;
-        y_s = y_r + y0;
+        # もとの位置に並行移動＆整数化（四捨五入）
+        xidx = int((x_r + x0) + 0.5);
+        yidx = int((y_r + y0) + 0.5);
 
-        # 四捨五入
-        xidx = int(x_s + 0.5);
-        yidx = int(y_s + 0.5);
-
-        # もし元画像中の範囲外であるならば無効文字で埋める
-        if (xidx < 1 || width < xidx || yidx < 1 || height < yidx) {
-          obuf[j,i] = "□"
+        # 参照先の範囲を確認
+        if (1<=xidx && xidx<=width && 1<=yidx && yidx <= height) {
+          obuf[j,i] = ibuf[yidx,xidx];
         }
         else {
-          obuf[j,i] = ibuf[yidx,xidx];
+          obuf[j,i] = "□";
         }
       }
     }
