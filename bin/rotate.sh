@@ -137,18 +137,11 @@ BEGIN {
 }
 
 {
-  # フレームを入力バッファに保存
-  rcnt = 1;
-  for (i = 1; i <= width; i++) { ibuf[rcnt,i] = $i; }
-  while (rcnt < height) {
-    # 入力がなければ終了
-    if (getline <= 0) { exit; }
-
-    # 1行入力に成功したのでカウントアップ
-    rcnt++;
-
-    # 入力した行をバッファに保存
-    for (i = 1; i <= width; i++) { ibuf[rcnt,i] = $i; }
+  # フレームを入力
+  for(j=1;j<=width;j++){ibuf[1,j]=$j;}
+  for (i = 2; i <= height; i++) {
+    if   (getline > 0) { for(j=1;j<=width;j++){ibuf[i,j]=$j;} }
+    else               { exit;                                }
   }
 
   # 出力バッファを作成
