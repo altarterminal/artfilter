@@ -108,36 +108,26 @@ BEGIN {
   r0 = pary[3];
   t0 = pary[4];
 
-  # 領域判定の暫定値（円を含む正方形）
-  xmin = x0 - r0;
-  xmax = x0 + r0;
-  ymin = y0 - r0;
-  ymax = y0 + r0;
-
   # 定数を定義
   pi = 3.141592;
   radPdeg = pi / 180.0;
-
-  # 領域判定のために利用する値
-  r2 = r0 * r0;
 
   # ターゲット座標列に関する変数
   tx[1];
   ty[1];
   tn = 0;
 
-  # ターゲット座標列を生成
-  for (j = ymin; j <= ymax; j++) {
-    for (i = xmin; i <= xmax; i++) {
-      # 原点中心の座標に平行移動
-      x_o = i - x0;
-      y_o = j - y0;
+  # 領域判定のために利用する値
+  r2 = r0 * r0;
 
+  # ターゲット座標列を生成.
+  for (j = r0*(-1); j <= r0; j++) {
+    for (i = r0*(-1); i <= r0; i++) {
       # 対象領域内であるか判定
-      if (x_0*x_0 + y_0*y_0 <= r2) {
+      if (i*i + j*j <= r2) {
         tn++;
-        tx[tn] = i;
-        ty[tn] = j;
+        tx[tn] = i + x0;
+        ty[tn] = j + y0;
       }
     }
   }
