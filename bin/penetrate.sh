@@ -142,11 +142,26 @@ BEGIN {
   dy = dary[2];
 
   # 別シーンを入力
-  rowidx = 0;
+  rowcnt = 0;
   while (getline line < anofile) {
-    rowidx++;  
-    split(line, ary, "");
-    for (i=1;i<=width;i++) { anobuf[rowidx,i] = ary[i]; }
+    rowcnt++;
+    linewidth = split(line, ary, "");
+
+    if (linewidth != width) {
+      # 入力サイズ（幅）が異なる場合はエラー終了
+      msg = "'"${0##*/}"': invalid input frame size (width)";
+      print msg > "/dev/stderr";
+      exit 81;
+    }
+
+    for (i=1;i<=width;i++) { anobuf[rowcnt,i] = ary[i]; }
+  }
+
+  if (rowcnt != height) {
+    # 入力サイズ（高さ）が異なる場合はエラー終了
+    msg = "'"${0##*/}"': invalid input frame size (height)";
+    print msg > "/dev/stderr";
+    exit 82;
   }
 
   # パラメータを初期化
