@@ -18,7 +18,7 @@ print_usage_and_exit () {
 
 	-rオプションでフレームの行数を指定する。
 	-cオプションでフレームの列数を指定する。
-	-aオプションでアナザーシーンファイルを指定する。
+	-aオプションで別シーンファイルを指定する。
 	-pオプションで領域のパラメータを指定できる。デフォルトは"1,1,1,1"
 	-dオプションで増減を指定できる。デフォルトは"1,1"。
 	USAGE
@@ -249,6 +249,11 @@ state == "s_run" {
   }
 }
 
+state == "s_fin" {
+  # 入力をパススルー
+  print;
+}
+
 # 有効座標に修正（フレーム範囲内の座標に修正）
 function validcoord(ival,max) {
   return (ival < 1) ? 1 : (ival > max) ? max : ival;
@@ -257,10 +262,5 @@ function validcoord(ival,max) {
 # 整数座標（四捨五入）に修正
 function intcoord(val) {
   return int(val + 0.5);
-}
-
-state == "s_fin" {
-  # 入力をパススルー
-  print;
 }
 ' ${onefile:+"$onefile"}
