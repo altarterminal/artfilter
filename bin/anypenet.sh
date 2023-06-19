@@ -7,9 +7,9 @@ set -eu
 
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
-	Usage   : ${0##*/} -r<行数> -c<列数> -a<別シーンファイル> [シーンファイル]
-	          -p<形状ファイル> -d<軌跡ファイル>
-	Options : 
+	Usage   : ${0##*/} -r<行数> -c<列数> -a<別シーンファイル>
+	          -p<形状ファイル> -d<軌跡ファイル> [シーンファイル]
+	Options : -w<待ち時間> -s<スキップ>
 
 	あるシーンの領域内に別シーンを上書きする。
 	２つのシーンの幅と高さは一致する必要がある。
@@ -22,6 +22,8 @@ print_usage_and_exit () {
 	-aオプションで別シーンファイルを指定する。
 	-pオプションで別シーン領域を構成する座標を含むファイルを指定する。
 	-dオプションで別シーン領域の軌跡を含むファイルを指定する。
+	-wオプションで開始までの待ち時間を指定できる。デフォルトは0。
+	-sオプションでイテレーションごとのスキップ数を指定できる。デフォルトは1。
 	USAGE
   exit 1
 }
@@ -37,6 +39,8 @@ opt_c=''
 opt_a=''
 opt_p=''
 opt_d=''
+opt_w='0'
+opt_s='1'
 
 # 引数をパース
 i=1
@@ -49,6 +53,8 @@ do
     -a*)                 opt_a=${arg#-a}      ;;
     -p*)                 opt_p=${arg#-p}      ;;
     -d*)                 opt_d=${arg#-d}      ;;
+    -w*)                 opt_w=${arg#-w}      ;;
+    -s*)                 opt_s=${arg#-s}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -117,6 +123,18 @@ else
   :
 fi
 
+# 有効な数値であるか判定
+if ! printf '%s\n' "$opt_w" | grep -Eq '^[0-9]+$'; then
+  echo "${0##*/}: \"$opt_w\" invalid number" 1>&2
+  exit 81
+fi
+
+# 有効な数値であるか判定
+if ! printf '%s\n' "$opt_s" | grep -Eq '^[0-9]+$'; then
+  echo "${0##*/}: \"$opt_s\" invalid number" 1>&2
+  exit 82
+fi
+
 # パラメータを決定
 onefile=$opr
 height=$opt_r
@@ -124,6 +142,8 @@ width=$opt_c
 anofile=$opt_a
 pfile=$opt_p
 tfile=$opt_d
+waittime=$opt_w
+skip=$opt_s
 
 ######################################################################
 # 本体処理
@@ -134,152 +154,170 @@ BEGIN {
   # パラメータ設定
   height  = '"${height}"';
   width   = '"${width}"';
-  param   = "'"${param}"'";
   anofile = "'"${anofile}"'";
   pfile   = "'"${pfile}"'";
   tfile   = "'"${tfile}"'";
+  waittime = '"${waittime}"';
+  skip     = '"${skip}"';
 
+  ####################################################################
+  # 別シーンを入力
+  ####################################################################
+
+  # 別シーンの入力を準備
+  rowcnt = 0;
 
   # 別シーンを入力
-  rowcnt = 0;
   while (getline line < anofile) {
     rowcnt++;
     linewidth = split(line, ary, "");
 
     if (linewidth != width) {
       # 入力サイズ（幅）が異なる場合はエラー終了
-      msg = "'"${0##*/}"': invalid input frame size (width)";
+      msg = "'"${0##*/}"': invalid input frame size (" width ")";
       print msg > "/dev/stderr";
       exit 81;
     }
 
+    # 一行を記録
     for (i=1;i<=width;i++) { anobuf[rowcnt,i] = ary[i]; }
   }
 
   if (rowcnt != height) {
     # 入力サイズ（高さ）が異なる場合はエラー終了
-    msg = "'"${0##*/}"': invalid input frame size (height)";
+    msg = "'"${0##*/}"': invalid input frame size (" height ")";
     print msg > "/dev/stderr";
     exit 82;
   }
 
-  # コンポーネント座標を入力
+  ####################################################################
+  # 部品座標を入力
+  ####################################################################
+
+  # 部品座標の入力を準備
   cmpcnt = 0;
+  cxmin =  32767;
+  cxmax = -32768;
+  cymin =  32767;
+  cymax = -32768;
+
+  # 部品座標を入力
   while (getline line < pfile) {
     cmpcnt++;
-    n = split(line, ary, "");
+    n = split(line, ary, " ");
 
     if (n != 2) {
       # 二次元座標以外のデータが入力された場合はエラー終了
-      msg = "'"${0##*/}"': invalid input data (cmpcnt)";
+      msg = "'"${0##*/}"': invalid input data (" cmpcnt ")";
       print msg > "/dev/stderr";
-      exit 81;
+      exit 91;
     }
 
     cx[cmpcnt] = ary[1];
     cy[cmpcnt] = ary[2];
+
+    cxmin = (cxmin > ary[1]) ? ary[1] : cxmin;
+    cxmax = (cxmax < ary[1]) ? ary[1] : cxmax;
+    cymin = (cymin > ary[2]) ? ary[2] : cymin;
+    cymax = (cymax < ary[2]) ? ary[2] : cymax;
   }
 
+  # 部品座標数を決定
+  ncmp = cmpcnt;
 
+  ####################################################################
+  # 軌跡座標を入力
+  ####################################################################
 
+  # 軌跡座標の入力を準備
+  trkcnt = 0;
 
-  # パラメータを初期化
-  rowidx = 1;
+  # 軌跡座標を入力
+  while (getline line < tfile) {
+    trkcnt++;
+    n = split(line, ary, " ");
 
-  # 現在の領域の範囲を設定
-  xcmin = rx;
-  xcmax = rx + rw - 1;
-  ycmin = ry;
-  ycmax = ry + rh - 1;
+    if (n != 2) {
+      # 二次元座標以外のデータが入力された場合はエラー終了
+      msg = "'"${0##*/}"': invalid input data (" trkcnt ")";
+      print msg > "/dev/stderr";
+      exit 101;
+    }
 
-  # 整数座標を取得
-  xcmini = intcoord(xcmin);
-  xcmaxi = intcoord(xcmax);
-  ycmini = intcoord(ycmin);
-  ycmaxi = intcoord(ycmax);
+    tx[trkcnt] = ary[1];
+    ty[trkcnt] = ary[2];
+  }
 
-  # 有効座標を取得
-  xcminv = validcoord(xcmini, width);
-  xcmaxv = validcoord(xcmaxi, width);
-  ycminv = validcoord(ycmini, height);
-  ycmaxv = validcoord(ycmaxi, height);
+  # 軌跡座標数を決定
+  ntrk = trkcnt;
 
-  # フィルタ実行状態に遷移
-  state = "s_run";
+  # 待ち時間があるならば「待機状態」に遷移
+  if   (waittime > 0) { state = "s_wait"; wcnt = waittime; }
+  else                { state = "s_run";  trkidx = 1;      }
 }
+
+######################################################################
+# 待機状態
+######################################################################
+
+state == "s_wait" {
+  # フレームをそのまま出力
+  print;
+  for (i = 2; i <= height; i++) {
+    if   (getline > 0) { print; }
+    else               { exit;  }
+  }
+
+  # 待ち時間をすべて消費したら「描画状態」に遷移
+  wcnt--;
+  if (wcnt == 0) { state = "s_run"; trkidx = 1; next; }
+}
+
+######################################################################
+# 実行状態
+######################################################################
 
 state == "s_run" {
-  # 現在の領域の位置を判断
-  if (xcmini > width  || xcmaxi < 1 ||
-      ycmini > height || ycmaxi < 1 ){
-    # 領域が完全にフレーム外なので上書きしない
+  # フレームを入力
+  for(j=1;j<=width;j++){buf[1,j]=$j;}
+  for (i = 2; i <= height; i++) {
+    if   (getline > 0) { for(j=1;j<=width;j++){buf[i,j]=$j;} }
+    else               { exit;                               }
   }
-  else {
-    # 一部または全部の領域がフレーム内にあるので上書きする
 
-    if (ycminv <= rowidx && rowidx <= ycmaxv) {
-      for (i = xcminv; i <= xcmaxv; i++) {
-        $i = anobuf[rowidx,i];
-      }
+  # 図形を上書き
+  for (cmpidx = 1; cmpidx <= ncmp; cmpidx++) {
+    cxcur = cx[cmpidx] + tx[trkidx];
+    cycur = cy[cmpidx] + ty[trkidx];
+
+    if (1 <= cxcur && cxcur <= width  &&
+        1 <= cycur && cycur <= height  ) {
+      buf[cycur,cxcur] = anobuf[cycur,cxcur];
     }
   }
 
-  # 出力
-  print;
+  # フレームバッファを出力
+  for (i = 1; i <= height; i++) {
+    for (j = 1; j <= width; j++) { printf "%s", buf[i, j]; }
+    print "";
+  }
 
-  # 行インデックスを更新
-  rowidx++;
-  if (rowidx > height) {
-    # フレームが終了
+  # 軌跡インデックスを更新
+  trkidx = trkidx + skip;
+  if (trkidx > ntrk) {
+    # すべての軌跡を追跡した
 
-    # 行インデックスをリセット
-    rowidx = 1;
-
-    # 現在の領域の範囲を更新
-    xcmin += dx;
-    xcmax += dx;
-    ycmin += dy;
-    ycmax += dy;
-
-    # 整数座標を更新
-    xcmini = intcoord(xcmin);
-    xcmaxi = intcoord(xcmax);
-    ycmini = intcoord(ycmin);
-    ycmaxi = intcoord(ycmax);
-
-    # 有効座標を更新
-    xcminv = validcoord(xcmini, width);
-    xcmaxv = validcoord(xcmaxi, width);
-    ycminv = validcoord(ycmini, height);
-    ycmaxv = validcoord(ycmaxi, height);
-
-    # 更新後に領域がフレーム外に出たら終了
-    if (dx > 0 && dy > 0 && (xcmini > width || ycmini > height) ||
-        dx > 0 && dy < 0 && (xcmini > width || ycmaxi < 1     ) ||
-        dx < 0 && dy > 0 && (xcmaxi < 1     || ycmini > height) ||
-        dx < 0 && dy < 0 && (xcmaxi < 1     || ycmaxi < 1     ) ){
-
-      # フィルタ終了状態に遷移
-      state = "s_fin";
-
-      # 現入力に関する処理を終了
-      next;
-    }
+    # 終了状態に遷移
+    state = "s_fin"; next;
   }
 }
+
+######################################################################
+# 終了状態
+######################################################################
 
 state == "s_fin" {
   # 入力をパススルー
   print;
-}
-
-# 有効座標に修正（フレーム範囲内の座標に修正）
-function validcoord(ival,max) {
-  return (ival < 1) ? 1 : (ival > max) ? max : ival;
-}
-
-# 整数座標（四捨五入）に修正
-function intcoord(val) {
-  return int(val + 0.5);
 }
 ' ${onefile:+"$onefile"}
