@@ -179,7 +179,7 @@ BEGIN {
     }
 
     # 一行を記録
-    for (i=1;i<=width;i++) { anobuf[rowcnt,i] = ary[i]; }
+    for (i=1;i<=width;i++) { abuf[rowcnt,i] = ary[i]; }
   }
 
   if (rowcnt != height) {
@@ -195,10 +195,6 @@ BEGIN {
 
   # 部品座標の入力を準備
   cmpcnt = 0;
-  cxmin =  32767;
-  cxmax = -32768;
-  cymin =  32767;
-  cymax = -32768;
 
   # 部品座標を入力
   while (getline line < pfile) {
@@ -214,11 +210,6 @@ BEGIN {
 
     cx[cmpcnt] = ary[1];
     cy[cmpcnt] = ary[2];
-
-    cxmin = (cxmin > ary[1]) ? ary[1] : cxmin;
-    cxmax = (cxmax < ary[1]) ? ary[1] : cxmax;
-    cymin = (cymin > ary[2]) ? ary[2] : cymin;
-    cymax = (cymax < ary[2]) ? ary[2] : cymax;
   }
 
   # 部品座標数を決定
@@ -278,10 +269,10 @@ state == "s_wait" {
 
 state == "s_run" {
   # フレームを入力
-  for(j=1;j<=width;j++){buf[1,j]=$j;}
+  for(j=1;j<=width;j++){obuf[1,j]=$j;}
   for (i = 2; i <= height; i++) {
-    if   (getline > 0) { for(j=1;j<=width;j++){buf[i,j]=$j;} }
-    else               { exit;                               }
+    if   (getline > 0) { for(j=1;j<=width;j++){obuf[i,j]=$j;} }
+    else               { exit;                                }
   }
 
   # 図形を上書き
@@ -291,13 +282,13 @@ state == "s_run" {
 
     if (1 <= cxcur && cxcur <= width  &&
         1 <= cycur && cycur <= height  ) {
-      buf[cycur,cxcur] = anobuf[cycur,cxcur];
+      obuf[cycur,cxcur] = abuf[cycur,cxcur];
     }
   }
 
   # フレームバッファを出力
   for (i = 1; i <= height; i++) {
-    for (j = 1; j <= width; j++) { printf "%s", buf[i, j]; }
+    for (j = 1; j <= width; j++) { printf "%s", obuf[i,j]; }
     print "";
   }
 
