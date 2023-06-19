@@ -13,9 +13,8 @@ print_usage_and_exit () {
 
 	あるシーンの領域内に別シーンを上書きする。
 	２つのシーンの幅と高さは一致する必要がある。
-
-	パラメータは以下の形式で指定する。
-	  左上座標を(x,y)、幅をw、高さをhとする矩形 -> "x,y,w,h"
+	形状ファイルに指定した座標の画素が別シーンファイルとなる。
+	形状ファイルで指定した座標郡は軌跡ファイル中の軌跡を移動する。
 
 	-rオプションでフレームの行数を指定する。
 	-cオプションでフレームの列数を指定する。
@@ -136,13 +135,13 @@ if ! printf '%s\n' "$opt_s" | grep -Eq '^[0-9]+$'; then
 fi
 
 # パラメータを決定
-onefile=$opr
+ofile=$opr
 height=$opt_r
 width=$opt_c
-anofile=$opt_a
+afile=$opt_a
 pfile=$opt_p
 tfile=$opt_d
-waittime=$opt_w
+wtime=$opt_w
 skip=$opt_s
 
 ######################################################################
@@ -154,11 +153,11 @@ BEGIN {
   # パラメータ設定
   height  = '"${height}"';
   width   = '"${width}"';
-  anofile = "'"${anofile}"'";
+  afile   = "'"${afile}"'";
   pfile   = "'"${pfile}"'";
   tfile   = "'"${tfile}"'";
-  waittime = '"${waittime}"';
-  skip     = '"${skip}"';
+  wtime   = '"${wtime}"';
+  skip    = '"${skip}"';
 
   ####################################################################
   # 別シーンを入力
@@ -168,7 +167,7 @@ BEGIN {
   rowcnt = 0;
 
   # 別シーンを入力
-  while (getline line < anofile) {
+  while (getline line < afile) {
     rowcnt++;
     linewidth = split(line, ary, "");
 
@@ -252,8 +251,8 @@ BEGIN {
   ntrk = trkcnt;
 
   # 待ち時間があるならば「待機状態」に遷移
-  if   (waittime > 0) { state = "s_wait"; wcnt = waittime; }
-  else                { state = "s_run";  trkidx = 1;      }
+  if   (wtime > 0) { state = "s_wait"; waitcnt = 0; }
+  else             { state = "s_run";  trkidx  = 1; }
 }
 
 ######################################################################
@@ -269,8 +268,8 @@ state == "s_wait" {
   }
 
   # 待ち時間をすべて消費したら「描画状態」に遷移
-  wcnt--;
-  if (wcnt == 0) { state = "s_run"; trkidx = 1; next; }
+  waitcnt++;
+  if (waitcnt >= wtime) { state = "s_run"; trkidx = 1; next; }
 }
 
 ######################################################################
@@ -320,4 +319,4 @@ state == "s_fin" {
   # 入力をパススルー
   print;
 }
-' ${onefile:+"$onefile"}
+' ${ofile:+"$ofile"}
