@@ -166,7 +166,7 @@ BEGIN {
     cy[i] = cary[2];
   }  
 
-  # もし待ち時間があるならば「待機状態」に遷移
+  # もし待ち時間があるなら「待機状態」に遷移
   if   (wtime > 0) { state = "s_wait"; wcnt = wtime; }
   else             { state = "s_run";  cidx = 1;     }
 }
@@ -210,8 +210,9 @@ state == "s_run" {
   }
 
   # 末尾インデックスを更新
-  cidx = cidx + nstep;
-  if (cidx > cn) { state = "s_fin"; ridx = 1; next; }
+  if      (cidx >= cn          ) { state = "s_fin"; ridx = 1; next; }
+  else if (cidx >= (cn - nstep)) { cidx = cn;                       }
+  else                           { cidx = cidx + nstep;             }
 }
 
 ######################################################################
