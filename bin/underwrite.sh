@@ -8,7 +8,7 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -r<行数> -c<列数> -b<背景ファイル> [前景ファイル]
-	Options : -o<オフセット> -t<透過文字>
+	Options : -o<オフセット> -t<透過文字> -w<待ち時間>
 
 	背景に対して前景を上書きする。
 
@@ -17,6 +17,7 @@ print_usage_and_exit () {
 	-fオプションで前景のファイルを指定する。
 	-oオプションで背景のオフセットを指定できる。デフォルトは"0,0"。
 	-tオプションで前景中の透過領域を示す文字を指定できる。デフォルトは□。
+	-wオプションで開始までの待ち時間を指定できる。デフォルトは0。
 	USAGE
   exit 1
 }
@@ -32,6 +33,7 @@ opt_c=''
 opt_b=''
 opt_o='0,0'
 opt_t='□'
+opt_w='0'
 
 # 引数をパース
 i=1
@@ -44,6 +46,7 @@ do
     -b*)                 opt_b=${arg#-b}      ;;
     -o*)                 opt_o=${arg#-o}      ;;
     -t*)                 opt_t=${arg#-t}      ;;
+    -w*)                 opt_w=${arg#-w}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -102,6 +105,12 @@ if ! printf '%s\n' "$opt_t" | grep -q '^.$'; then
   exit 71
 fi
 
+# 有効な数値であるか判定
+if ! printf '%s\n' "$opt_w" | grep -Eq '^[0-9]+$'; then
+  echo "${0##*/}: \"$opt_w\" invalid number" 1>&2
+  exit 81
+fi
+
 # パラメータを決定
 forfile=$opr
 height=$opt_r
@@ -109,6 +118,7 @@ width=$opt_c
 backfile=$opt_b
 offset=$opt_o
 tchar=$opt_t
+wtime=$opt_w
 
 ######################################################################
 # 本体処理
@@ -121,6 +131,7 @@ BEGIN {
   backfile = "'"${backfile}"'";
   offset   = "'"${offset}"'";
   tchar    = "'"${tchar}"'";
+  wtime   = '"${wtime}"';
 
   # オフセットを分離  
   split(offset, oary, ",");
@@ -145,9 +156,34 @@ BEGIN {
   # 水平方向の表示範囲を確認
   sidx = (ox < 1) ? 1 : (ox+1);
   eidx = (width < (ox+bwidth)) ? width : (ox+bwidth);
+
+  # もし待ち時間があるならば「待機状態」に遷移
+  if   (wtime > 0) { state = "s_wait"; wcnt = wtime; }
+  else             { state = "s_run";                }
 }
 
-{
+######################################################################
+# 待機状態
+######################################################################
+
+state == "s_wait" {
+  # フレームをそのまま出力
+  print;
+  for (i = 2; i <= height; i++) {
+    if   (getline > 0) { print; }
+    else               { exit;  }
+  }
+
+  # 待ち時間をすべて消費したら「描画状態」に遷移
+  wcnt--;
+  if (wcnt == 0) { state = "s_run"; next; }
+}
+
+######################################################################
+# 実行状態
+#####################################################################
+
+state == "s_run" {
   # 背景領域の中にあるときは上書き
   if ((oy < rowidx) && (rowidx <= oy+bheight)) {
     for (i = sidx; i <= eidx; i++) {
