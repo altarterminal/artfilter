@@ -151,7 +151,7 @@ BEGIN {
     srand();
     for (i = cn; i > 1; i--) {
       ia = i;
-      ib = int(rand() * 4294967295) % i;
+      ib = (int(rand() * 4294967295) % (i - 1)) + 1;
   
       tmp = cseq[ia];
       cseq[ia] = cseq[ib];
