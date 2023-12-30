@@ -159,10 +159,10 @@ state == "s_run" {
         cidx = 1;
 
         # 置換をもう一度最初から行う
-        if   (isloop == "yes") { state = "s_run"; }
+        if   (isloop == "yes") { state = "s_run"; next; }
 
         # 置換を終了して以降の入力はそのまま出力
-        else                   { state = "s_fin"; }
+        else                   { state = "s_fin"; next; }
       }
     }
   }
