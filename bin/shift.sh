@@ -1,47 +1,48 @@
 #!/bin/sh
 set -eu
 
-######################################################################
-# 設定
-######################################################################
+#####################################################################
+# help
+#####################################################################
 
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
-	Usage   : ${0##*/} -c<列数> -r<行数> [テキストファイル]
-	Options : -u<シフト列数>
+	Usage   : ${0##*/} -c<col num> -r<row num> <text file>
+	Options : -u<unit to shift> -i
 
-	入力テキストを徐々に左にシフトして表示する（リングバッファライク）。
+	shift the input text to the left gradually (like a ring buffer).
 
-	-uオプションで一度にシフトする列数を指定できる。デフォルトは1。
+	-u: Specify the unit to shift once (default: 1).
+	-i: Enable the shift to right.
 	USAGE
   exit 1
 }
 
-######################################################################
-# パラメータ
-######################################################################
+#####################################################################
+# parameter
+#####################################################################
 
-# 変数を初期化
 opr=''
 opt_c=''
 opt_r=''
 opt_u='1'
+opt_i='no'
 
-# 引数をパース
 i=1
 for arg in ${1+"$@"}
 do
-  case "$arg" in
-    -h|--help|--version) print_usage_and_exit ;;    
-    -c*)                 opt_c=${arg#-c}      ;;
-    -r*)                 opt_r=${arg#-r}      ;;
-    -u*)                 opt_u=${arg#-u}      ;;    
+  case "${arg}" in
+    -h|--help|--version) print_usage_and_exit ;;
+    -c*)                 opt_c="${arg#-c}"    ;;
+    -r*)                 opt_r="${arg#-r}"    ;;
+    -u*)                 opt_u="${arg#-u}"    ;;
+    -i)                  opt_i='yes'          ;;
     *)
-      if [ $i -eq $# ] && [ -z "$opr" ]; then
-        opr=$arg
+      if [ $i -eq $# ] && [ -z "${opr}" ]; then
+        opr="${arg}"
       else
-        echo "${0##*/}: invalid args" 1>&2
-        exit 11
+        echo "ERROR:${0##*/}: invalid args" 1>&2
+        exit 1
       fi
       ;;
   esac
@@ -49,81 +50,81 @@ do
   i=$((i + 1))
 done
 
-# 引数を評価
-if   [ "_$opr" = '_' ] || [ "_$opr" = '_-' ]; then     
-  opr=''
-elif [ ! -f "$opr"   ] || [ ! -r "$opr"    ]; then
-  echo "${0##*/}: \"$opr\" cannot be opened" 1>&2
-  exit 21
+if   [ "${opr}" = '' ] || [ "${opr}" = '-' ]; then
+  opr='-'
+elif [ ! -f "${opr}" ] || [ ! -r "${opr}"  ]; then
+  echo "ERROR:${0##*/}: invalid file specified <${opr}>" 1>&2
+  exit 1
 else
   :
 fi
 
-# 引数を評価
-if ! printf '%s\n' "$opt_r" | grep -Eq '^[0-9]+$'; then
-  echo "${0##*/}: \"$opt_r\" invalid number" 1>&2
-  exit 31
+if ! printf '%s\n' "${opt_r}" | grep -Eq '^[0-9]+$'; then
+  echo "ERROR:${0##*/}: invalid number specified <${opt_r}>" 1>&2
+  exit 1
 fi
-if ! printf '%s\n' "$opt_c" | grep -Eq '^[0-9]+$'; then
-  echo "${0##*/}: \"$opt_c\" invalid number" 1>&2
-  exit 41
+if ! printf '%s\n' "${opt_c}" | grep -Eq '^[0-9]+$'; then
+  echo "ERROR:${0##*/}: invalid number specified <${opt_c}>" 1>&2
+  exit 1
 fi
-if ! printf '%s\n' "$opt_u" | grep -Eq '^[0-9]+$'; then
-  echo "${0##*/}: \"$opt_u\" invalid number" 1>&2
-  exit 51
+if ! printf '%s\n' "${opt_u}" | grep -Eq '^[0-9]+$'; then
+  echo "ERROR:${0##*/}: invalid number specified <${opt_u}>" 1>&2
+  exit 1
 fi
 
-# パラメータを決定
-content=$opr
-width=$opt_c
-height=$opt_r
-unit=$opt_u
+readonly TEXT_FILE="${opr}"
+readonly WIDTH="${opt_c}"
+readonly HEIGHT="${opt_r}"
+readonly UNIT="${opt_u}"
+readonly IS_INVERSE="${opt_i}"
 
-######################################################################
-# 本体処理
-######################################################################
+#####################################################################
+# main routine
+#####################################################################
+
+cat "${TEXT_FILE}"                                                  |
 
 gawk '
 BEGIN {
-  # パラメータを設定
-  width  = '"${width}"';
-  height = '"${height}"';
-  unit   = '"${unit}"';
+  width  = '"${WIDTH}"';
+  height = '"${HEIGHT}"';
+  unit   = '"${UNIT}"';
 
-  # 現在の先頭がオリジナル文字列の何番目の文字であるか
-  lidx = 1;
+  is_inverse = "'"${IS_INVERSE}"'"
 
-  # 現在の行インデックス
-  ridx  = 1;
+  # The index of the currently head character
+  lead_idx = 1;
+
+  # The index to represent current row to pay attention to
+  row_idx  = 1;
 }
 
 {
-  if (lidx == 1)         {
-    # オリジナルの文字列をそのまま表示
+  if (lead_idx == 1) {
+    # Output the original text
 
     curstr = $0
-  } else                   {
-    # シフトを行う
+  } else             {
+    # Apply the shift
 
-    curstr = substr($0, lidx, width - lidx + 1) \
-             substr($0, 1,            lidx - 1);
+    curstr = substr($0, lead_idx, width - lead_idx + 1) \
+             substr($0, 1,                lead_idx - 1);
   }
 
   print curstr;
   
-  if (ridx >= height) {
-    # フレームを終了したのでシフト数を更新
+  if (row_idx >= height) {
+    if (is_inverse == "no") {
+      lead_idx = lead_idx + unit
+      if (lead_idx > width) { lead_idx = lead_idx - width; }
+    } else                   {
+      lead_idx = lead_idx - unit
+      if (lead_idx < 1    ) { lead_idx = lead_idx + width; }
+    }
 
-    # シフト数を更新
-    lidx = lidx + unit
-    if (lidx > width) { lidx = lidx - width; }
-
-    # 行インデックスをリセット
-    ridx = 1;
-  } else               {
-    # まだフレームの途中なのでシフト数を維持
-
-    ridx++;
+    row_idx = 1;
+  } else                 {
+    row_idx++;
   }
 }
-' ${content:+"$content"}
+'
